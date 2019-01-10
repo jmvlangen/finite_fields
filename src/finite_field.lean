@@ -74,8 +74,6 @@ have mult : ∀ x y : α, x * y ∈ comap f I → x ∈ comap f I ∨ y ∈ coma
      show x ∈ comap f I ∨ y ∈ comap f I, from or.inr this),
 show is_prime (comap f I), from ⟨proper, mult⟩
 
-
-
 end ideal
 
 namespace finite_field
