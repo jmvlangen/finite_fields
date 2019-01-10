@@ -1,8 +1,66 @@
 import ring_theory.algebra
 import field_theory.finite
 import ring_theory.ideals
+import algebra.euclidean_domain
+import ring_theory.principal_ideal_domain
 
 universes u v w
+
+namespace int
+
+open euclidean_domain ideal
+
+lemma gen_ideal_ℤ (I : ideal ℤ) :
+∃ n : ℕ, I = span {(n : ℤ)} :=
+have ∃ m : ℤ, I = span {m}, from (principal_ideal_domain.principal I).principal,
+let ⟨m, _⟩ := this in
+have I = span {(nat_abs m : ℤ)}, from
+calc
+    I = span {m}                                : by assumption
+  ... = (span {m}) * ⊤                          : by rw mul_top
+  ... = (span {m}) * (span {(norm_unit m : ℤ)}) : by rw [iff.mpr (@span_singleton_eq_top _ _ ↑(norm_unit m)) ⟨(norm_unit m), refl (norm_unit m)⟩]
+  ... = span {m * (norm_unit m : ℤ)}            : by simp [span_mul_span]
+  ... = span {(nat_abs m : ℤ)}                  : by rw coe_nat_abs_eq_mul_norm_unit,
+show ∃ n : ℕ, I = span {(n : ℤ)}, from ⟨nat_abs m, this⟩
+
+lemma gen_prime_ideal_ℤ (I : ideal ℤ) [is_prime I] :
+∃ p : ℕ, I = span {(p : ℤ)} ∧ (p = 0 ∨ nat.prime p) :=
+have ∃ n : ℕ, I = span {(n : ℤ)}, from gen_ideal_ℤ I,
+let ⟨n, h⟩ := this in
+or.elim (nat.eq_zero_or_eq_succ_pred n)
+  (assume h₀ : n = 0,
+   show ∃ p : ℕ, I = span {(p : ℤ)} ∧ (p = 0 ∨ nat.prime p), from  ⟨n, h, or.inl h₀⟩)
+  (assume h₁ : n = nat.succ (nat.pred n),
+   have n ≠ 0, from eq.symm h₁ ▸ nat.succ_ne_zero (nat.pred n),
+   have (n : ℤ) ≠ 0, by simp [this],
+   have prime (↑n : ℤ), from iff.mp (span_singleton_prime this) (h ▸ ‹is_prime I›),
+   have nat.prime n, from iff.mpr nat.prime_iff_prime_int this,
+   show ∃ p : ℕ, I = span {(p : ℤ)} ∧ (p = 0 ∨ nat.prime p), from  ⟨n, h, or.inr this⟩)
+
+lemma maximal_ideal_ℤ (p : ℕ) : nat.prime p → is_maximal (span {(p : ℤ)} : ideal ℤ) :=
+assume h₀ : nat.prime p,
+have prime (p : ℤ), from iff.mp nat.prime_iff_prime_int h₀,
+have irreducible (p : ℤ), from irreducible_of_prime this,
+show is_maximal (span {(p : ℤ)}), from principal_ideal_domain.is_maximal_of_irreducible this
+
+lemma gen_maximal_ideal_ℤ (I : ideal ℤ) [is_maximal I] :
+∃ p : ℕ, I = span {(p : ℤ)} ∧ nat.prime p :=
+have ∃ p : ℕ, I = span {(p : ℤ)} ∧ (p = 0 ∨ nat.prime p), from gen_prime_ideal_ℤ I,
+let ⟨p, hI, hp⟩ := this in
+or.elim hp
+  (assume h₀ : p = 0,
+   have (p : ℤ) = 0, by simp [h₀], --nat.cast_eq_zero
+   have I = ⊥, from eq.symm hI ▸ iff.mpr span_singleton_eq_bot this,
+   let J := (span {(2 : ℤ)} : ideal ℤ) in
+   have J ≠ (⊥ : ideal ℤ), from
+     assume h₁ : J = ⊥,
+     have 2 = 0, from sorry, --iff.mp (is_principal.eq_bot_iff_generator_eq_zero J) h₁,
+     show false, from sorry,
+   show ∃ p : ℕ, I = span {(p : ℤ)} ∧ nat.prime p, from sorry)
+  (assume h₁ : nat.prime p,
+   show ∃ p : ℕ, I = span {(p : ℤ)} ∧ nat.prime p, from ⟨p, hI, h₁⟩)
+
+end int
 
 namespace ring
 
