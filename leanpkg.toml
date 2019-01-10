@@ -1,0 +1,8 @@
+[package]
+name = "finite_fields"
+version = "0.1"
+lean_version = "nightly-2018-08-23"
+path = "src"
+
+[dependencies]
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "40fa9ade2f5649569639608db5e621e5fad0cc02"}

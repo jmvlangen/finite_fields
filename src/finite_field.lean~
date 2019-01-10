@@ -1,0 +1,33 @@
+import ring_theory.algebra
+import field_theory.finite
+
+universes u v
+variables {α : Type u} {β : Type v}
+
+namespace field
+
+class iso (α : Type u) (β : Type v) :=
+( forward : α → β
+
+end field
+
+namespace finite_field
+
+open fintype field
+
+variables [field α] [fintype α]
+variables [field β] [fintype β]
+
+#check field α
+
+theorem fin_field_card (α : Type*) [field α] [fintype α] : ∃ p n : ℕ, prime p ∧ card α = p^n :=
+have ι : ℤ → α, from sorry,
+have ∃ p : ℕ, prime p ∧ ι ⁻¹' ⊥ = _, from sorry,
+
+theorem exists_fin_field : ∀ p n : ℕ, prime p → ∃ α : Type*, ∃ [hf : field α], ∃ [hfin : fintype α], @card α hfin = p^n :=
+sorry
+
+theorem unique_fin_field [field α] [field β] : card α = card β → α ≅ β :=
+sorry
+
+end finite_field
