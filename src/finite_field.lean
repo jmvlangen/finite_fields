@@ -179,7 +179,16 @@ or.elim hp
   (assume hprime : nat.prime p,
    have is_maximal I, from eq.symm hI ▸ int.maximal_ideal_ℤ p hprime,
    let F := I.quotient in
-   have field F, from sorry,
+   have field F, from @quotient.field _ _ I ‹is_maximal I›,
+   have ∀ x : ℤ, x ∈ I → ι x = 0, from
+     assume x : ℤ,
+     assume hI : x ∈ I,
+     have ι x ∈ (⊥ : ideal α), from eq.mp set.mem_preimage_eq hI,
+     show ι x = 0, from submodule.mem_bot.mp this,
+   have algebra.core F α, from
+     { to_fun := @ideal.quotient.lift _ _ _ _ I ι ‹is_ring_hom ι› this,
+       hom :=  ideal.quotient.is_ring_hom},
+   have algebra F α, from algebra.of_core this,
    sorry) --Do more!
 
 theorem exists_fin_field : ∀ p n : ℕ, prime p → ∃ α : Type*, ∃ [hf : field α], ∃ [hfin : fintype α], @card α hfin = p^n :=
