@@ -3,6 +3,7 @@ import field_theory.finite
 import ring_theory.ideals
 import algebra.euclidean_domain
 import ring_theory.principal_ideal_domain
+import ring_theory.ideal_operations
 
 universes u v w
 
@@ -98,48 +99,61 @@ end ring
 
 namespace ideal
 
-variables {α : Type u} {β : Type v}
-variables [comm_ring α] [comm_ring β]
+variable {α : Type u}
+variable [comm_ring α]
 
-/-- The pullback of an ideal under a ring homomorphism --/
-def comap (f : α → β) [is_ring_hom f] (I : ideal β) : ideal α :=
-{carrier := f ⁻¹' I,
- zero := by rw [set.mem_preimage_eq, is_add_group_hom.zero f]; exact I.zero,
- add := 
- assume x y _ _,
- have f x ∈ I, from eq.mp set.mem_preimage_eq ‹x ∈ f ⁻¹' I›,
- have f y ∈ I, from eq.mp set.mem_preimage_eq ‹y ∈ f ⁻¹' I›,
- have f x + f y ∈ I, from I.add ‹f x ∈ I› ‹f y ∈ I›,
- show f (x + y) ∈ I, from eq.substr (is_add_group_hom.add f x y) ‹f x + f y ∈ I›,
- smul := 
- assume c x _,
- have f x ∈ I, from eq.mp set.mem_preimage_eq ‹x ∈ f ⁻¹' I›,
- have (f c) • (f x) ∈ I, from I.smul (f c) ‹f x ∈ I›,
- show f (c • x) ∈ I, from eq.substr (@is_ring_hom.map_mul _ _ _ _ f _ c x) ‹(f c) • (f x) ∈ I›}
-
-def comap_prime (f : α → β) [is_ring_hom f] (I : ideal β) [is_prime I] : is_prime (comap f I) :=
-have proper : comap f I ≠ ⊤, from
-  assume h : comap f I = ⊤,
-  have (1 : α) ∈ comap f I, from iff.mp (ideal.eq_top_iff_one (comap f I)) h,
-  have f 1 ∈ I, from eq.mp set.mem_preimage_eq ‹(1 : α) ∈ f ⁻¹' I›,
-  have (1 : β) ∈ I, from eq.subst (is_ring_hom.map_one f) ‹f 1 ∈ I›,
-  have I = ⊤, from iff.mpr (ideal.eq_top_iff_one I) ‹(1 : β) ∈ I›,
-  show false, from ‹is_prime I›.left ‹I = ⊤›,
-have mult : ∀ x y : α, x * y ∈ comap f I → x ∈ comap f I ∨ y ∈ comap f I, from
-  assume x y _,
-  have f (x * y) ∈ I, from eq.mp set.mem_preimage_eq ‹x * y ∈ f ⁻¹' I›,
-  have f x * f y ∈ I, from eq.subst (@is_ring_hom.map_mul _ _ _ _ f _ x y) ‹f (x * y) ∈ I›,
-  have f x ∈ I ∨ f y ∈ I, from ‹is_prime I›.right ‹f x * f y ∈ I›,
-  or.elim ‹f x ∈ I ∨ f y ∈ I›
-    (assume _ : f x ∈ I,
-     have x ∈ comap f I, from eq.mp set.mem_preimage_eq ‹f x ∈ I›,
-     show x ∈ comap f I ∨ y ∈ comap f I, from or.inl this)
-    (assume _ : f y ∈ I,
-     have y ∈ comap f I, from eq.mp set.mem_preimage_eq ‹f y ∈ I›,
-     show x ∈ comap f I ∨ y ∈ comap f I, from or.inr this),
-show is_prime (comap f I), from ⟨proper, mult⟩
+lemma mem_of_not_bot (I : ideal α) : I ≠ (⊥ : ideal α) → ∃ x ∈ I, (x : α) ≠ 0 :=
+assume h : I ≠ ⊥,
+have ¬ (∀ x : α, x ∈ I ↔ x ∈ (⊥ : ideal α)), from mt submodule.ext h,
+have ∃ x : α, ¬ (x ∈ I ↔ x ∈ (⊥ : ideal α)), from classical.not_forall.mp this,
+let ⟨x, h₁⟩ := this in
+have x ≠ 0, from
+  assume h0 : x = 0,
+  have x ∈ I, from (eq.symm h0 ▸ ideal.zero_mem I),
+  have x ∈ (⊥ : ideal α), from (eq.symm h0 ▸ ideal.zero_mem (⊥ : ideal α)),
+  have x ∈ I ↔ x ∈ (⊥ : ideal α),
+    from iff_of_true ‹x ∈ I› ‹x ∈ (⊥ : ideal α)›,
+  absurd this h₁,
+have ¬ (x ∈ (⊥ : ideal α)), from mt submodule.mem_bot.mp this,
+have x ∈ I, from classical.not_not.mp
+  (assume hI : ¬ (x ∈ I),
+   absurd (iff_of_false hI ‹¬(x ∈ (⊥ : ideal α))›) h₁),
+show ∃ x ∈ I, (x : α) ≠ 0, from ⟨x, ‹x ∈ I›, ‹x ≠ 0›⟩
 
 end ideal
+
+namespace field
+
+open ideal
+
+variable {α : Type u}
+variable [field α]
+
+def ne_bot_is_top : ∀ I : ideal α, I ≠ ⊥ → I = ⊤ :=
+assume I : ideal α,
+assume h : I ≠ ⊥,
+have ∃ x ∈ I, (x : α) ≠ (0 : α), from mem_of_not_bot I h,
+let ⟨x, hI, h0⟩ := this in
+have is_unit x, from is_unit_of_mul_one x (x⁻¹) (field.mul_inv_cancel h0),
+show I = ⊤, from eq_top_of_is_unit_mem I hI this
+
+def bot_is_max : is_maximal (⊥ : ideal α) :=
+have h₁ : (⊥ : ideal α) ≠ (⊤ : ideal α), from
+  assume h : (⊥ : ideal α) = (⊤ : ideal α),
+  have (1 : α) ∈ (⊥ : ideal α), from iff.mp (eq_top_iff_one (⊥ : ideal α)) h,
+  have (1 : α) = 0, from iff.mp submodule.mem_bot this,
+  absurd this one_ne_zero,
+have h₂ : ∀ I : ideal α, ⊥ < I → I = ⊤, from 
+  assume I : ideal α,
+  assume hI : ⊥ < I,
+  have I ≠ ⊥, from lattice.bot_lt_iff_ne_bot.mp hI,
+  show I = ⊤, from ne_bot_is_top I this,
+show is_maximal (⊥ : ideal α), from ⟨h₁, h₂⟩
+
+def bot_is_prime : is_prime (⊥ : ideal α) :=
+is_maximal.is_prime bot_is_max
+
+end field
 
 namespace finite_field
 
@@ -153,8 +167,20 @@ theorem fin_field_card (α : Type*) [field α] [fintype α] : ∃ p n : ℕ, pri
 have alg_ℤ : algebra ℤ α, from ring.to_ℤ_algebra α,
 let ι : ℤ → α := alg_ℤ.to_fun in
 have is_ring_hom ι, from alg_ℤ.hom,
-have ∃ p : ℕ, prime p ∧ ideal.comap ι (⊥ : ideal α) = span {(p : ℤ)}, from sorry,
-sorry
+let I := ideal.comap ι (⊥ : ideal α) in
+have is_prime I,
+  from @is_prime.comap _ _ _ _ ι _ _ field.bot_is_prime,
+have ∃ p : ℕ, I = span {(p : ℤ)} ∧ (p = 0 ∨ nat.prime p),
+  from @int.gen_prime_ideal_ℤ I this,
+let ⟨p, hI, hp⟩ := this in
+or.elim hp
+  (assume h0 : p = 0,
+   sorry) --Get a contradiction!!!
+  (assume hprime : nat.prime p,
+   have is_maximal I, from eq.symm hI ▸ int.maximal_ideal_ℤ p hprime,
+   let F := I.quotient in
+   have field F, from sorry,
+   sorry) --Do more!
 
 theorem exists_fin_field : ∀ p n : ℕ, prime p → ∃ α : Type*, ∃ [hf : field α], ∃ [hfin : fintype α], @card α hfin = p^n :=
 sorry
