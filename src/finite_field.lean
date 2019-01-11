@@ -54,9 +54,16 @@ or.elim hp
    let J := (span {(2 : ℤ)} : ideal ℤ) in
    have J ≠ (⊥ : ideal ℤ), from
      assume h₁ : J = ⊥,
-     have 2 = 0, from sorry, --iff.mp (is_principal.eq_bot_iff_generator_eq_zero J) h₁,
-     show false, from sorry,
-   show ∃ p : ℕ, I = span {(p : ℤ)} ∧ nat.prime p, from sorry)
+     have h2 : (2 : ℤ) = 0, from iff.mp span_singleton_eq_bot h₁,
+     have h2n : (2 : ℤ) ≠ 0, from iff.mpr int.coe_nat_ne_zero (nat.succ_ne_zero 1),
+     absurd h2 h2n,
+   have I < J, from eq.symm ‹I = ⊥› ▸ (iff.mpr lattice.bot_lt_iff_ne_bot ‹J ≠ (⊥ : ideal ℤ)›),
+   have J = ⊤, from and.right ‹is_maximal I› J this,
+   have (1 : ℤ) ∈ J, from iff.mp (eq_top_iff_one J) this,
+   have (2 : ℤ) ∣ 1, from iff.mp mem_span_singleton this,
+   have (2 : ℤ) ≤ 1, from int.le_of_dvd int.one_pos this,
+   have (2 : ℤ) > 1, from one_lt_two,
+   absurd ‹(2 : ℤ) ≤ 1› (not_le_of_gt ‹(2 : ℤ) > 1›))
   (assume h₁ : nat.prime p,
    show ∃ p : ℕ, I = span {(p : ℤ)} ∧ nat.prime p, from ⟨p, hI, h₁⟩)
 
