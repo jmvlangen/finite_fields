@@ -105,19 +105,6 @@ show ∃ x ∈ I, (x : α) ≠ 0, from ⟨x, ‹x ∈ I›, ‹x ≠ 0›⟩
 
 end ideal
 
-namespace is_ring_hom
-
-variables {α : Type u} {β : Type v}
-variables [comm_ring α] [comm_ring β]
-
-def ker (f : α → β) [is_ring_hom f] : ideal α := ideal.comap f ⊥
-
-lemma ker_eq_bot {f : α → β} [is_ring_hom f] (h : ker f = ⊥) : function.injective f :=
-(is_add_group_hom.injective_iff _).2
-  (λ a ha, by rw[←submodule.mem_bot, ←h]; constructor; exact ha)
-
-end is_ring_hom
-
 namespace field
 
 open ideal
@@ -214,7 +201,7 @@ let ⟨p, hI, hp⟩ := this in
 or.elim hp
   (assume h0 : p = 0,
   have I = ⊥, by rw [hI, span_singleton_eq_bot]; simpa,
-  have function.injective ι, from is_ring_hom.ker_eq_bot this,
+  have function.injective ι, from is_ring_hom.ker_eq_bot.mp this,
   absurd this set.not_injective_int_fintype)
   (assume hprime : nat.prime p,
    have is_maximal I, from eq.symm hI ▸ int.maximal_ideal_ℤ p hprime,

@@ -33,31 +33,17 @@ def ker (f : α → β) [is_ring_hom f] : ideal α := comap f ⊥
 
 variables {f : α → β} [is_ring_hom f]
 
-theorem ker_eq_bot : ker f = ⊥ ↔ injective f :=
-iff.intro
-  (assume h : ker f = ⊥,
-   show injective f, from
-     assume x y : α,
-     assume h_eq : f x = f y,
-     have f (x - y) = 0, from
-       calc
-         f (x - y) = f x - f y : map_sub f
-               ... = 0         : h_eq ▸ sub_self (f x),
-     have x - y ∈ ker f, from submodule.mem_bot.mpr this,
-     have x - y = 0, from submodule.mem_bot.mp (h ▸ this),
-     show x = y, from eq_of_sub_eq_zero this)
-  (assume h : injective f,
-   suffices ∀ x : α, x ∈ ker f → x = 0, from (ideal.eq_bot (ker f)).mpr this,
-   assume x : α,
-   assume hx : x ∈ ker f,
-   have f x = f 0, from
-     calc
-       f x = 0   : submodule.mem_bot.mp hx
-       ... = f 0 : eq.symm (map_zero f),
-   show x = 0, from h this)
-
 lemma mem_ker {x : α} : x ∈ ker f ↔ f x = 0 :=
 submodule.mem_bot
+
+theorem ker_eq_bot : ker f = ⊥ ↔ injective f :=
+begin
+  rw (is_add_group_hom.injective_iff f),
+  rw eq_bot,
+  apply forall_congr,
+  intro,
+  rw mem_ker,
+end
 
 lemma le_ker {I : ideal α} : I ≤ ker f ↔ ∀ x : α, x ∈ I → f x = 0 :=
 begin
