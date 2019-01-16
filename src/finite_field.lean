@@ -221,7 +221,7 @@ let ⟨p, hspan, hp⟩ := int.gen_prime_ideal_ℤ (char_ideal α) in
 or.elim hp
   (assume h0 : p = 0,
   have char_ideal α = ⊥, by rw [hspan, span_singleton_eq_bot]; simpa,
-  have function.injective int.cast, from is_ring_hom.ker_eq_bot this,
+  have function.injective int.cast, from (@is_ring_hom.ker_eq_bot ℤ α _ _ int.cast _).mp this,
   absurd this set.not_injective_int_fintype)
   (assume h : nat.prime p, ⟨p, hspan, h⟩)
 
