@@ -79,24 +79,37 @@ or.elim hp
   (assume h₁ : nat.prime p,
    show ∃ p : ℕ, I = span {(p : ℤ)} ∧ nat.prime p, from ⟨p, hI, h₁⟩)
 
-noncomputable lemma quotient_equiv (n : ℕ+) : ideal.quotient (@span ℤ _ {(n : ℤ)}) ≃r zmod n :=
-let nℤ := @span ℤ _ {(n : ℤ)} in
+lemma quotient_equiv (n : ℕ+) : ideal.quotient (@span ℤ _ {(n : ℤ)}) ≃r zmod n :=
+let n' : ℤ := n in
+let nℤ := @span ℤ _ {n'} in
 let ι : ℤ → zmod n := int.cast in
-have hIl : nℤ ≤ ker ι, from
-  have ι n = 0, from zmod.eq_zero_iff_dvd_int.mpr (dvd_refl (n : ℤ)),
-  have (n : ℤ) ∈ ker ι, from mem_ker.mpr this,
-  have ({(n : ℤ)} : set ℤ) ⊆ ker ι, from set.singleton_subset_iff.mpr this,
-  show nℤ ≤ ker ι, from span_le.mpr this,
-have hIr : nℤ ≥ ker ι, from
-  assume m : ℤ,
-  assume h0 : m ∈ ker ι,
-  have ι m = 0, from mem_ker.mp h0,
-  have (n : ℤ) ∣ m, from zmod.eq_zero_iff_dvd_int.mp this,
-  show m ∈ nℤ, from mem_span_singleton.mpr this,
-have hI : nℤ = ker ι, from eq_iff_le_not_lt.mpr ⟨hIl, not_lt_of_ge hIr⟩,
-have hf : function.surjective ι, from
-  assume y : zmod n, ⟨y.val, zmod.cast_val y⟩,
-show quotient nℤ ≃r zmod n, from factor_iso hI hf
+have hI : nℤ ≤ ker ι, from span_le.mpr $ set.singleton_subset_iff.mpr $ mem_ker.mpr $ zmod.eq_zero_iff_dvd_int.mpr $ dvd_refl n,
+show quotient nℤ ≃r zmod n, from
+{ to_fun := factor ι nℤ hI,
+  inv_fun := λ m, ideal.quotient.mk nℤ (m.val),
+  left_inv :=
+    assume x : quotient nℤ,
+    suffices ∀ y : ℤ, (λ m : zmod n, ideal.quotient.mk nℤ (m.val)) ((factor ι nℤ hI) (ideal.quotient.mk nℤ y)) = ideal.quotient.mk nℤ y,
+      from quotient.induction_on' x this,
+    assume y : ℤ,
+    have y - y % n' = n' * (y / n'), from
+    calc
+      y - y % n' = y % n' + n' * (y / n') - y % n' : by rw (int.mod_add_div y n')
+             ... = n' * (y / n')                   : by rw (add_sub_cancel'),
+    have n' ∣ y - y % n', from dvd_of_mul_right_eq (y / n') (eq.symm this),
+    have n' ∣ y - ((ι y).val : ℤ), from eq.symm (@zmod.coe_val_cast_int n y) ▸ this,
+    begin
+      unfold,
+      rw (factor_commutes hI),
+      apply eq.symm,
+      apply ideal.quotient.eq.mpr,
+      apply mem_span_singleton.mpr,
+      assumption,
+    end,
+  right_inv :=
+    assume x : zmod n,
+    eq.symm (@factor_commutes _ _ _ _ _ _ _ hI x.val) ▸ zmod.cast_val x,
+  hom := factor_to_ring_hom' }
 
 end int
 
