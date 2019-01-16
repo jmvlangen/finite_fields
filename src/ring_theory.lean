@@ -1,6 +1,7 @@
 import ring_theory.ideals
 import ring_theory.ideal_operations
 import logic.basic
+import data.equiv.algebra
 
 universes u v
 
@@ -30,7 +31,7 @@ variables {α : Type u} {β : Type v}
 variables [comm_ring α] [comm_ring β]
 
 def ker (f : α → β) [is_ring_hom f] : ideal α := comap f ⊥
-
+n
 variables {f : α → β} [is_ring_hom f]
 
 lemma mem_ker {x : α} : x ∈ ker f ↔ f x = 0 :=
@@ -71,6 +72,9 @@ show x = 0, from eq.symm this ▸ mk_zero I
 def factor (f : α → β) [is_ring_hom f] (I : ideal α) (h : I ≤ ker f) : quotient I → β := 
 lift I f (le_ker.mp h)
 
+lemma factor_to_ring_hom' {h : I ≤ ker f} : is_ring_hom (factor f I h) :=
+ideal.quotient.is_ring_hom
+
 instance factor_to_ring_hom {h : I ≤ ker f} : is_ring_hom (factor f I h) :=
 ideal.quotient.is_ring_hom
 
@@ -107,5 +111,19 @@ begin
   rw ←h,
   exact map_mk_eq_bot
 end
+
+theorem factor_surjective (h : I ≤ ker f) (hf : surjective f) : surjective (factor f I h) :=
+assume y : β,
+have ∃ x : α, f x = y, from hf y,
+let ⟨x, hfx⟩ := this in
+have (factor f I h) (ideal.quotient.mk I x) = y, from hfx ▸ factor_commutes h,
+show ∃ x' : quotient I, (factor f I h) x' = y, from ⟨ideal.quotient.mk I x, this⟩
+
+theorem factor_bijective (h : I = ker f) (hf : surjective f) :
+                         bijective (factor f I (h ▸ le_refl I)) :=
+⟨factor_injective h, factor_surjective (h ▸ le_refl I) hf⟩
+
+noncomputable theorem factor_iso (h : I = ker f) (hf : surjective f) : quotient I ≃r β :=
+ring_equiv.mk (equiv.of_bijective (factor_bijective h hf)) factor_to_ring_hom'
 
 end is_ring_hom
