@@ -5,6 +5,7 @@ import ring_theory.ideal_operations
 import field_theory.finite
 import algebra.euclidean_domain
 import algebra.module
+import algebra.ring
 import set_theory.cardinal
 import linear_algebra.dimension
 import linear_algebra.basic
@@ -12,6 +13,7 @@ import linear_algebra.basis
 import data.finset
 import data.equiv.algebra
 import ring_theory
+import group_theory.subgroup
 
 universes u v w
 
@@ -103,6 +105,19 @@ show ∃ x ∈ I, (x : α) ≠ 0, from ⟨x, ‹x ∈ I›, ‹x ≠ 0›⟩
 
 end ideal
 
+namespace is_ring_hom
+
+variables {α : Type u} {β : Type v}
+variables [comm_ring α] [comm_ring β]
+
+def ker (f : α → β) [is_ring_hom f] : ideal α := ideal.comap f ⊥
+
+lemma ker_eq_bot {f : α → β} [is_ring_hom f] (h : ker f = ⊥) : function.injective f :=
+(is_add_group_hom.injective_iff _).2
+  (λ a ha, by rw[←submodule.mem_bot, ←h]; constructor; exact ha)
+
+end is_ring_hom
+
 namespace field
 
 open ideal
@@ -181,21 +196,16 @@ end vector_space
 
 namespace finite_field
 
-open fintype field ring ideal function
+open fintype field ring ideal is_group_hom
 
 variables {α : Type u} {β : Type v}
 variables [field α] [fintype α]
 variables [field β] [fintype β]
 
-def ker (f : α → β) [is_ring_hom f] : ideal α := comap f ⊥
-
-theorem ker_eq_bot {f : α → β} [is_ring_hom f] : ker f = ⊥ ↔ injective f := sorry
-
-theorem fin_field_card (α : Type*) [field α] [fintype α] : ∃ p n : ℕ, prime p ∧ card α = p^n :=
+theorem fin_field_card (α : Type*) [discrete_field α] [fintype α] : ∃ p n : ℕ, prime p ∧ card α = p^n :=
 have alg_ℤ : algebra ℤ α, from ring.to_ℤ_algebra α,
 let ι : ℤ → α := alg_ℤ.to_fun in
-have is_ring_hom ι, from alg_ℤ.hom,
-let I := ideal.comap ι (⊥ : ideal α) in
+let I := is_ring_hom.ker ι in
 have is_prime I,
   from @is_prime.comap _ _ _ _ ι _ _ field.bot_is_prime,
 have ∃ p : ℕ, I = span {(p : ℤ)} ∧ (p = 0 ∨ nat.prime p),
@@ -203,7 +213,9 @@ have ∃ p : ℕ, I = span {(p : ℤ)} ∧ (p = 0 ∨ nat.prime p),
 let ⟨p, hI, hp⟩ := this in
 or.elim hp
   (assume h0 : p = 0,
-   sorry) --Get a contradiction!!!
+  have I = ⊥, by rw [hI, span_singleton_eq_bot]; simpa,
+  have function.injective ι, from is_ring_hom.ker_eq_bot this,
+  absurd this set.not_injective_int_fintype)
   (assume hprime : nat.prime p,
    have is_maximal I, from eq.symm hI ▸ int.maximal_ideal_ℤ p hprime,
    let F := I.quotient in
@@ -214,7 +226,7 @@ or.elim hp
      have ι x ∈ (⊥ : ideal α), from eq.mp set.mem_preimage_eq hI,
      show ι x = 0, from submodule.mem_bot.mp this,
    have algebra.core F α, from
-     { to_fun := @ideal.quotient.lift _ _ _ _ I ι ‹is_ring_hom ι› this,
+     { to_fun := @ideal.quotient.lift _ _ _ _ I ι _ this,
        hom :=  ideal.quotient.is_ring_hom},
    have algebra F α, from algebra.of_core this,
    sorry) --Do more!
