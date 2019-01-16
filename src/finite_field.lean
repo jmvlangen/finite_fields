@@ -12,13 +12,15 @@ import linear_algebra.basic
 import linear_algebra.basis
 import data.finset
 import data.equiv.algebra
+import ring_theory
 import group_theory.subgroup
+import data.zmod.basic
 
 universes u v w
 
 namespace int
 
-open euclidean_domain ideal
+open euclidean_domain ideal is_ring_hom ideal.quotient
 
 lemma gen_ideal_ℤ (I : ideal ℤ) :
 ∃ n : ℕ, I = span {(n : ℤ)} :=
@@ -76,6 +78,26 @@ or.elim hp
    absurd ‹(2 : ℤ) ≤ 1› (not_le_of_gt ‹(2 : ℤ) > 1›))
   (assume h₁ : nat.prime p,
    show ∃ p : ℕ, I = span {(p : ℤ)} ∧ nat.prime p, from ⟨p, hI, h₁⟩)
+
+noncomputable lemma quotient_equiv (n : ℕ+) : ideal.quotient (@span ℤ _ {(n : ℤ)}) ≃r zmod n :=
+let nℤ := @span ℤ _ {(n : ℤ)} in
+let ι : ℤ → zmod n := int.cast in
+have hIl : nℤ ≤ ker ι, from
+  have ι n = 0, from zmod.eq_zero_iff_dvd_int.mpr (dvd_refl (n : ℤ)),
+  have (n : ℤ) ∈ ker ι, from mem_ker.mpr this,
+  have ({(n : ℤ)} : set ℤ) ⊆ ker ι, from set.singleton_subset_iff.mpr this,
+  show nℤ ≤ ker ι, from span_le.mpr this,
+have hIr : nℤ ≥ ker ι, from
+  assume m : ℤ,
+  assume h0 : m ∈ ker ι,
+  have ι m = 0, from mem_ker.mp h0,
+  have (n : ℤ) ∣ m, from zmod.eq_zero_iff_dvd_int.mp this,
+  show m ∈ nℤ, from mem_span_singleton.mpr this,
+have hI : nℤ = ker ι, from eq_iff_le_not_lt.mpr ⟨hIl, not_lt_of_ge hIr⟩,
+have hf : function.surjective ι, from
+  assume y : zmod n, ⟨y.val, zmod.cast_val y⟩,
+show quotient nℤ ≃r zmod n, from factor_iso hI hf
+
 end int
 
 namespace ideal
@@ -105,19 +127,6 @@ have x ∈ I, from classical.not_not.mp
 show ∃ x ∈ I, (x : α) ≠ 0, from ⟨x, ‹x ∈ I›, ‹x ≠ 0›⟩
 
 end ideal
-
-namespace is_ring_hom
-
-variables {α : Type u} {β : Type v}
-variables [comm_ring α] [comm_ring β]
-
-def ker (f : α → β) [is_ring_hom f] : ideal α := ideal.comap f ⊥
-
-lemma ker_eq_bot {f : α → β} [is_ring_hom f] (h : ker f = ⊥) : function.injective f :=
-(is_add_group_hom.injective_iff _).2
-  (λ a ha, by rw[←submodule.mem_bot, ←h]; constructor; exact ha)
-
-end is_ring_hom
 
 namespace field
 
