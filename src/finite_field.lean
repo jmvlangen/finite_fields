@@ -169,6 +169,49 @@ is_maximal.is_prime bot_is_max
 
 end field
 
+namespace finsupp
+/-
+(to_fun    : α → β)
+(inv_fun   : β → α)
+(left_inv  : left_inverse inv_fun to_fun)
+(right_inv : right_inverse inv_fun to_fun)
+-/
+
+open finsupp
+
+variables {α : Type u} {β : Type v}
+variables [fintype α] [decidable_eq α]
+variables [fintype β] [decidable_eq β] [has_zero β]
+
+instance decidable_mem_fun {α : Type*} [decidable_eq α] (s : finset α): decidable_pred (λ a, a ∈ s) :=
+assume a, finset.decidable_mem a s
+
+--if ha : a = 0 then 0 else classical.some (exists_inv ha)
+
+
+--∀a, a ∈ support ↔ to_fun a ≠ 0
+
+lemma subtype_domain_extend (p : α → Prop) [decidable_pred p] (f : subtype p →₀ β) : α →₀ β :=
+{ support            := finset.map ⟨subtype.val, subtype.val_injective⟩ f.support,
+  to_fun             := λ a, if h : p a then f ⟨a, h⟩ else 0,
+  mem_support_to_fun := λ a,
+    iff.intro
+    (assume hmap,
+    let ⟨ap, hap, _⟩ := finset.mem_map.mp hmap in
+    have h : (if h : p a then f ⟨a, h⟩ else 0) = f ap, from sorry,
+    by rw[h]; exact (mem_support_to_fun f ap).mp hap)
+    (sorry) }
+
+
+lemma finsupp_fin_support (b : finset α) : {l : α →₀ β // l.support ⊆ b} ≃ ({x // x ∈ b} →₀ β) :=
+{ to_fun    := (finsupp.subtype_domain (λ a, a ∈ b)) ∘ subtype.val,
+  inv_fun   := sorry,--λ f, ⟨on_finset b (λ a : α, if h : a ∈ b then f ⟨a, h⟩ else 0) (λ a, ), sorry⟩,
+  left_inv  := sorry,
+  right_inv := sorry
+}
+
+end finsupp
+
 namespace vector_space
  
 open fintype vector_space cardinal submodule set function
@@ -196,10 +239,18 @@ lt_omega.mp this
 #check (module_equiv_lc hb).to_equiv.bijective
 #check linear_map.range_eq_top-/
  
+#check module_equiv_lc
+#check linear_equiv.to_equiv
+
+
 lemma card_fin_vector_space : ∃ n : ℕ, card β = (card α) ^ n :=
 let ⟨n, hn⟩ := dim_fin α β in
 ⟨n,
 let ⟨b, hb⟩ := exists_is_basis β in
+have f : β ≃ lc.supported b, from (module_equiv_lc hb).to_equiv,
+have g : lc.supported b ≃ (lc.supported b).carrier, from sorry, --⟨submodule.carrier, ⟩,
+have β ≃ {l : lc α β | ↑l.support ⊆ b}, from equiv.trans f g,
+
 /-have fb : fintype b, from (finite.of_fintype b).fintype,
 have h1 : β ≃ (b → α), from sorry,
 have h2 : n = @fintype.card b fb, from sorry,
@@ -245,6 +296,8 @@ eq.symm h ▸ int.maximal_ideal_ℤ p hp
 noncomputable instance prime_field_is_field : field (prime_field α) :=
 quotient.field (char_ideal α)
 
+--need [decidable (λ a, a ∈ I)]
+--comes from ker
 lemma decidable_mem_ideal {α : Type*} [comm_ring α] [decidable_eq α] (I : ideal α) :
 decidable_rel (λ x y, x - y ∈ I) := sorry
 
