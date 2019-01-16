@@ -118,6 +118,9 @@ namespace ideal
 variable {α : Type u}
 variable [comm_ring α]
 
+lemma bot_ne_top {α : Type u} [nonzero_comm_ring α] : (⊥ : ideal α) ≠ (⊤ : ideal α) :=
+by rw[ideal.ne_top_iff_one, submodule.mem_bot]; simp
+
 lemma mem_of_not_bot (I : ideal α) : I ≠ (⊥ : ideal α) → ∃ x ∈ I, (x : α) ≠ 0 :=
 assume h : I ≠ ⊥,
 have ¬ (∀ x : α, x ∈ I ↔ x ∈ (⊥ : ideal α)), from mt submodule.ext h,
@@ -145,7 +148,7 @@ open ideal
 variable {α : Type u}
 variable [field α]
 
-def ne_bot_is_top : ∀ I : ideal α, I ≠ ⊥ → I = ⊤ :=
+lemma ne_bot_is_top : ∀ I : ideal α, I ≠ ⊥ → I = ⊤ :=
 assume I : ideal α,
 assume h : I ≠ ⊥,
 have ∃ x ∈ I, (x : α) ≠ (0 : α), from mem_of_not_bot I h,
@@ -153,20 +156,15 @@ let ⟨x, hI, h0⟩ := this in
 have is_unit x, from is_unit_of_mul_one x (x⁻¹) (field.mul_inv_cancel h0),
 show I = ⊤, from eq_top_of_is_unit_mem I hI this
 
-def bot_is_max : is_maximal (⊥ : ideal α) :=
-have h₁ : (⊥ : ideal α) ≠ (⊤ : ideal α), from
-  assume h : (⊥ : ideal α) = (⊤ : ideal α),
-  have (1 : α) ∈ (⊥ : ideal α), from iff.mp (eq_top_iff_one (⊥ : ideal α)) h,
-  have (1 : α) = 0, from iff.mp submodule.mem_bot this,
-  absurd this one_ne_zero,
-have h₂ : ∀ I : ideal α, ⊥ < I → I = ⊤, from 
+lemma bot_is_max : is_maximal (⊥ : ideal α) :=
+have h : ∀ I : ideal α, ⊥ < I → I = ⊤, from 
   assume I : ideal α,
   assume hI : ⊥ < I,
   have I ≠ ⊥, from lattice.bot_lt_iff_ne_bot.mp hI,
   show I = ⊤, from ne_bot_is_top I this,
-show is_maximal (⊥ : ideal α), from ⟨h₁, h₂⟩
+show is_maximal (⊥ : ideal α), from ⟨bot_ne_top, h⟩
 
-def bot_is_prime : is_prime (⊥ : ideal α) :=
+lemma bot_is_prime : is_prime (⊥ : ideal α) :=
 is_maximal.is_prime bot_is_max
 
 end field
@@ -191,7 +189,7 @@ have dim α β < omega, from
            ... < omega         : nat_lt_omega _,
 lt_omega.mp this
  
-variables (b : set β) (hb : is_basis b)
+--variables (b : set β) (hb : is_basis b)
  
 /-#check fintype.card
 #check is_basis.repr_range
@@ -219,37 +217,58 @@ namespace finite_field
 open fintype field ring ideal is_group_hom
 
 variables {α : Type u} {β : Type v}
-variables [field α] [fintype α]
+variables [discrete_field α] [fintype α]
 variables [field β] [fintype β]
 
-theorem fin_field_card (α : Type*) [discrete_field α] [fintype α] : ∃ p n : ℕ, prime p ∧ card α = p^n :=
-have alg_ℤ : algebra ℤ α, from ring.to_ℤ_algebra α,
-let ι : ℤ → α := alg_ℤ.to_fun in
-let I := is_ring_hom.ker ι in
-have is_prime I,
-  from @is_prime.comap _ _ _ _ ι _ _ field.bot_is_prime,
-have ∃ p : ℕ, I = span {(p : ℤ)} ∧ (p = 0 ∨ nat.prime p),
-  from @int.gen_prime_ideal_ℤ I this,
-let ⟨p, hI, hp⟩ := this in
+def char_ideal (α : Type u) [discrete_field α] [fintype α] : ideal ℤ :=
+is_ring_hom.ker (int.cast : ℤ → α)
+
+def prime_field (α : Type u) [discrete_field α] [fintype α] : Type :=
+quotient (char_ideal α)
+
+instance char_ideal_is_prime : is_prime (char_ideal α) :=
+@is_prime.comap _ _ _ _ int.cast _ _ field.bot_is_prime
+
+lemma char_ideal_ne_zero : ∃ p : ℕ, char_ideal α = span {(p : ℤ)} ∧ nat.prime p :=
+let ⟨p, hspan, hp⟩ := int.gen_prime_ideal_ℤ (char_ideal α) in
 or.elim hp
   (assume h0 : p = 0,
-  have I = ⊥, by rw [hI, span_singleton_eq_bot]; simpa,
-  have function.injective ι, from is_ring_hom.ker_eq_bot.mp this,
+  have char_ideal α = ⊥, by rw [hspan, span_singleton_eq_bot]; simpa,
+  have function.injective int.cast, from (@is_ring_hom.ker_eq_bot ℤ α _ _ int.cast _).mp this,
   absurd this set.not_injective_int_fintype)
-  (assume hprime : nat.prime p,
-   have is_maximal I, from eq.symm hI ▸ int.maximal_ideal_ℤ p hprime,
-   let F := I.quotient in
-   have field F, from @quotient.field _ _ I ‹is_maximal I›,
-   have ∀ x : ℤ, x ∈ I → ι x = 0, from
-     assume x : ℤ,
-     assume hI : x ∈ I,
-     have ι x ∈ (⊥ : ideal α), from eq.mp set.mem_preimage_eq hI,
-     show ι x = 0, from submodule.mem_bot.mp this,
-   have algebra.core F α, from
-     { to_fun := @ideal.quotient.lift _ _ _ _ I ι _ this,
-       hom :=  ideal.quotient.is_ring_hom},
-   have algebra F α, from algebra.of_core this,
-   sorry) --Do more!
+  (assume h : nat.prime p, ⟨p, hspan, h⟩)
+
+instance char_ideal_is_maximal : is_maximal (char_ideal α) :=
+let ⟨p, h, hp⟩ := @char_ideal_ne_zero α _ _ in
+eq.symm h ▸ int.maximal_ideal_ℤ p hp
+
+noncomputable instance prime_field_is_field : field (prime_field α) :=
+quotient.field (char_ideal α)
+
+lemma decidable_mem_ideal {α : Type*} [comm_ring α] [decidable_eq α] (I : ideal α) :
+decidable_rel (λ x y, x - y ∈ I) := sorry
+
+noncomputable instance prime_field_is_discrete_field : discrete_field (prime_field α) :=
+{ has_decidable_eq := @quotient.decidable_eq ℤ (submodule.quotient_rel _) (decidable_mem_ideal _),
+  inv_zero := sorry,
+  ..finite_field.prime_field_is_field }
+
+instance prime_field_fintype : fintype (prime_field α) := sorry
+
+lemma card_prime_field_prime : nat.prime (card (prime_field α)) := sorry
+
+instance prime_field_module : module (prime_field α) α := sorry
+
+theorem fin_field_card (α : Type*) [discrete_field α] [fintype α] : ∃ p n : ℕ, nat.prime p ∧ card α = p^n :=
+let ι : ℤ → α := int.cast in
+let ⟨p, hc, hp⟩ := @char_ideal_ne_zero α _ _ in
+have ∀ x : ℤ, x ∈ (char_ideal α) → ι x = 0, from
+  assume x hI,
+  have ι x ∈ (⊥ : ideal α), from set.mem_preimage_eq.mp hI,
+  show ι x = 0, from submodule.mem_bot.mp this,
+have V : vector_space (prime_field α) α, from @vector_space.mk (prime_field α) α finite_field.prime_field_is_discrete_field _ _,
+let ⟨n, h⟩ := @vector_space.card_fin_vector_space (prime_field α) α _ _ _ _ V in
+⟨card (prime_field α), n, card_prime_field_prime, h⟩
 
 theorem exists_fin_field : ∀ p n : ℕ, prime p → ∃ α : Type*, ∃ [hf : field α], ∃ [hfin : fintype α], @card α hfin = p^n :=
 sorry
