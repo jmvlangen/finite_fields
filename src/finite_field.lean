@@ -11,6 +11,7 @@ import linear_algebra.basic
 import linear_algebra.basis
 import data.finset
 import data.equiv.algebra
+import ring_theory
 
 universes u v w
 
