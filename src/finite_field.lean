@@ -177,38 +177,57 @@ namespace finsupp
 (right_inv : right_inverse inv_fun to_fun)
 -/
 
-open finsupp
-
 variables {α : Type u} {β : Type v}
-variables [fintype α] [decidable_eq α]
-variables [fintype β] [decidable_eq β] [has_zero β]
+variables [decidable_eq α]
+variables [decidable_eq β] [has_zero β]
 
-instance decidable_mem_fun {α : Type*} [decidable_eq α] (s : finset α): decidable_pred (λ a, a ∈ s) :=
-assume a, finset.decidable_mem a s
+--instance decidable_mem_fun {α : Type*} [decidable_eq α] (s : finset α): decidable_pred (λ a, a ∈ s) :=
+--assume a, finset.decidable_mem a s
 
---if ha : a = 0 then 0 else classical.some (exists_inv ha)
-
-
---∀a, a ∈ support ↔ to_fun a ≠ 0
-
-lemma subtype_domain_extend (p : α → Prop) [decidable_pred p] (f : subtype p →₀ β) : α →₀ β :=
+def subtype_domain_extend (p : α → Prop) [d : decidable_pred p] (f : subtype p →₀ β) : α →₀ β :=
 { support            := finset.map ⟨subtype.val, subtype.val_injective⟩ f.support,
-  to_fun             := λ a, if h : p a then f ⟨a, h⟩ else 0,
+  to_fun             := λ a, if hc : p a then f ⟨a, hc⟩ else 0,
   mem_support_to_fun := λ a,
     iff.intro
-    (assume hmap,
-    let ⟨ap, hap, _⟩ := finset.mem_map.mp hmap in
-    have h : (if h : p a then f ⟨a, h⟩ else 0) = f ap, from sorry,
-    by rw[h]; exact (mem_support_to_fun f ap).mp hap)
-    (sorry) }
+      (assume hmap,
+      let ⟨ap, hsup, hs⟩ := finset.mem_map.mp hmap in
+      have hp : p a, by rw[←hs]; exact ap.property,
+      have ap = ⟨a, hp⟩, by rw[subtype.ext]; exact hs,
+      by rw [dif_pos hp, ←this]; exact (mem_support_to_fun f ap).mp hsup)
+      (assume hne0,
+      have hp : p a, from match d a with
+        | is_false hnp := absurd (dif_neg hnp) hne0
+        | is_true  hp  := hp
+      end,
+      have h1 : (if hc : p a then f ⟨a, hc⟩ else 0) = f ⟨a, hp⟩, from dif_pos hp,
+      have h2 : f ⟨a, hp⟩ ≠ 0, by rw[←h1]; exact hne0,
+      finset.mem_map_of_mem _ ((mem_support_to_fun f ⟨a, hp⟩).mpr h2)) }
 
+lemma subtype_domain_extend_restrict (p : α → Prop) [decidable_pred p] (f : α →₀ β):
+subtype_domain_extend p (subtype_domain p f) = f :=
+sorry
 
-lemma finsupp_fin_support (b : finset α) : {l : α →₀ β // l.support ⊆ b} ≃ ({x // x ∈ b} →₀ β) :=
+lemma subtype_domain_restrict_extend (p : α → Prop) [decidable_pred p] (f : {a // p a} →₀ β):
+subtype_domain p (subtype_domain_extend p f) = f :=
+sorry
+
+lemma finsupp_equiv_finset_domain (b : finset α) : {f : α →₀ β // f.support ⊆ b} ≃ ({a // a ∈ b} →₀ β) :=
 { to_fun    := (finsupp.subtype_domain (λ a, a ∈ b)) ∘ subtype.val,
-  inv_fun   := sorry,--λ f, ⟨on_finset b (λ a : α, if h : a ∈ b then f ⟨a, h⟩ else 0) (λ a, ), sorry⟩,
-  left_inv  := sorry,
-  right_inv := sorry
-}
+  inv_fun   := (λ f, subtype.mk (subtype_domain_extend (λ a, a ∈ b) f)
+    (begin 
+      rw[finset.subset_iff],
+      assume x h,
+      exact match finset.decidable_mem x b with
+        | is_false hnb :=
+          let g := (subtype_domain_extend (λ (a : α), a ∈ b) f) in
+          have g x = 0, from dif_neg hnb,
+          have hn : x ∉ g.support, from not_mem_support_iff.mpr this,
+          absurd h hn
+        | is_true hb   := hb
+      end
+    end)),
+  left_inv  := λ f, by rw[subtype.ext]; exact subtype_domain_extend_restrict _ f.val,
+  right_inv := λ f, subtype_domain_restrict_extend _ f }
 
 end finsupp
 
@@ -238,18 +257,16 @@ lt_omega.mp this
 #check is_basis.repr_range
 #check (module_equiv_lc hb).to_equiv.bijective
 #check linear_map.range_eq_top-/
- 
-#check module_equiv_lc
-#check linear_equiv.to_equiv
 
-
-lemma card_fin_vector_space : ∃ n : ℕ, card β = (card α) ^ n :=
+lemma card_fin_vector_space [decidable_eq β]: ∃ n : ℕ, card β = (card α) ^ n :=
 let ⟨n, hn⟩ := dim_fin α β in
 ⟨n,
 let ⟨b, hb⟩ := exists_is_basis β in
 have f : β ≃ lc.supported b, from (module_equiv_lc hb).to_equiv,
 have g : lc.supported b ≃ (lc.supported b).carrier, from sorry, --⟨submodule.carrier, ⟩,
 have β ≃ {l : lc α β | ↑l.support ⊆ b}, from equiv.trans f g,
+have bf : finset β, from (finite.of_fintype b).to_finset,
+--have {l : β →₀ α | l.support ⊆ bf} ≃ ({a // a ∈ bf} →₀ β), from finsupp.finsupp_equiv_finset_domain bf,
 
 /-have fb : fintype b, from (finite.of_fintype b).fintype,
 have h1 : β ≃ (b → α), from sorry,
