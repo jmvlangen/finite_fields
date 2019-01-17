@@ -1,6 +1,4 @@
-import ring_theory.ideals
 import ring_theory.ideal_operations
-import logic.basic
 import data.equiv.algebra
 
 universes u v
@@ -21,6 +19,27 @@ begin
   apply submodule.mem_bot
 end
 
+lemma bot_ne_top {α : Type u} [nonzero_comm_ring α] : (⊥ : ideal α) ≠ (⊤ : ideal α) :=
+by rw[ideal.ne_top_iff_one, submodule.mem_bot]; exact one_ne_zero
+
+lemma mem_of_not_bot (I : ideal α) : I ≠ (⊥ : ideal α) → ∃ x ∈ I, (x : α) ≠ 0 :=
+assume h : I ≠ ⊥,
+have ¬ (∀ x : α, x ∈ I ↔ x ∈ (⊥ : ideal α)), from mt submodule.ext h,
+have ∃ x : α, ¬ (x ∈ I ↔ x ∈ (⊥ : ideal α)), from classical.not_forall.mp this,
+let ⟨x, h₁⟩ := this in
+have x ≠ 0, from
+  assume h0 : x = 0,
+  have x ∈ I, from (eq.symm h0 ▸ ideal.zero_mem I),
+  have x ∈ (⊥ : ideal α), from (eq.symm h0 ▸ ideal.zero_mem (⊥ : ideal α)),
+  have x ∈ I ↔ x ∈ (⊥ : ideal α),
+    from iff_of_true ‹x ∈ I› ‹x ∈ (⊥ : ideal α)›,
+  absurd this h₁,
+have ¬ (x ∈ (⊥ : ideal α)), from mt submodule.mem_bot.mp this,
+have x ∈ I, from classical.not_not.mp
+  (assume hI : ¬ (x ∈ I),
+   absurd (iff_of_false hI ‹¬(x ∈ (⊥ : ideal α))›) h₁),
+show ∃ x ∈ I, (x : α) ≠ 0, from ⟨x, ‹x ∈ I›, ‹x ≠ 0›⟩
+
 end ideal
 
 namespace is_ring_hom
@@ -31,7 +50,6 @@ variables {α : Type u} {β : Type v}
 variables [comm_ring α] [comm_ring β]
 
 def ker (f : α → β) [is_ring_hom f] : ideal α := comap f ⊥
-n
 variables {f : α → β} [is_ring_hom f]
 
 lemma mem_ker {x : α} : x ∈ ker f ↔ f x = 0 :=
