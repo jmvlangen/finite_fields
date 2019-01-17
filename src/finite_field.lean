@@ -116,7 +116,7 @@ instance char_ideal_is_prime : is_prime (char_ideal α) :=
 @is_prime.comap _ _ _ _ int.cast _ _ field.bot_is_prime
 
 lemma char_ideal_ne_zero : ∃ p : ℕ, char_ideal α = span {(p : ℤ)} ∧ nat.prime p :=
-let ⟨p, hspan, hp⟩ := int.gen_prime_ideal_ℤ (char_ideal α) in
+let ⟨p, hspan, hp⟩ := int.prime_ideal_eq_nℤ (char_ideal α) in
 or.elim hp
   (assume h0 : p = 0,
   have char_ideal α = ⊥, by rw [hspan, span_singleton_eq_bot]; simpa,
@@ -126,7 +126,7 @@ or.elim hp
 
 instance char_ideal_is_maximal : is_maximal (char_ideal α) :=
 let ⟨p, h, hp⟩ := @char_ideal_ne_zero α _ _ in
-eq.symm h ▸ int.maximal_ideal_ℤ p hp
+eq.symm h ▸ int.nℤ_maximal p hp
 
 noncomputable instance prime_field_is_field : field (prime_field α) :=
 quotient.field (char_ideal α)
