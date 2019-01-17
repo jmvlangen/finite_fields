@@ -119,7 +119,7 @@ variable {α : Type u}
 variable [comm_ring α]
 
 lemma bot_ne_top {α : Type u} [nonzero_comm_ring α] : (⊥ : ideal α) ≠ (⊤ : ideal α) :=
-by rw[ideal.ne_top_iff_one, submodule.mem_bot]; simp
+by rw[ideal.ne_top_iff_one, submodule.mem_bot]; exact one_ne_zero
 
 lemma mem_of_not_bot (I : ideal α) : I ≠ (⊥ : ideal α) → ∃ x ∈ I, (x : α) ≠ 0 :=
 assume h : I ≠ ⊥,
