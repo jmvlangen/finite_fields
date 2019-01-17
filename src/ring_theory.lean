@@ -1,6 +1,4 @@
-import ring_theory.ideals
 import ring_theory.ideal_operations
-import logic.basic
 import data.equiv.algebra
 
 universes u v
@@ -12,14 +10,25 @@ variable [comm_ring α]
 
 lemma eq_bot (I : ideal α) : I = ⊥ ↔ ∀ x : α, x ∈ I → x = 0 :=
 begin
-  apply (iff.trans lattice.eq_bot_iff),
-  apply (iff.trans submodule.le_def),
+  rw [lattice.eq_bot_iff, submodule.le_def],
   apply forall_congr,
   intro x,
   apply imp_congr_right,
   intro h,
-  apply submodule.mem_bot
+  exact submodule.mem_bot
 end
+
+lemma bot_ne_top {α : Type u} [nonzero_comm_ring α] : (⊥ : ideal α) ≠ (⊤ : ideal α) :=
+by rw[ideal.ne_top_iff_one, submodule.mem_bot]; exact one_ne_zero
+
+lemma mem_of_not_bot (I : ideal α) : I ≠ (⊥ : ideal α) → ∃ x ∈ I, (x : α) ≠ 0 :=
+assume h : I ≠ ⊥,
+have ¬ (∀ x : α, x ∈ I → x = 0), by rw ←eq_bot; assumption,
+have ∃ x : α, ¬ (x ∈ I → x = 0), from classical.not_forall.mp this,
+let ⟨x, h₁⟩ := this in
+have x ∈ I, from classical.not_not.mp (not_not_of_not_imp h₁),
+have x ≠ 0, from not_of_not_imp h₁,
+show ∃ x ∈ I, (x : α) ≠ 0, from ⟨x, ‹x ∈ I›, ‹x ≠ 0›⟩
 
 end ideal
 
@@ -31,7 +40,6 @@ variables {α : Type u} {β : Type v}
 variables [comm_ring α] [comm_ring β]
 
 def ker (f : α → β) [is_ring_hom f] : ideal α := comap f ⊥
-n
 variables {f : α → β} [is_ring_hom f]
 
 lemma mem_ker {x : α} : x ∈ ker f ↔ f x = 0 :=
@@ -39,8 +47,7 @@ submodule.mem_bot
 
 theorem ker_eq_bot : ker f = ⊥ ↔ injective f :=
 begin
-  rw (is_add_group_hom.injective_iff f),
-  rw eq_bot,
+  rw [is_add_group_hom.injective_iff f, eq_bot],
   apply forall_congr,
   intro,
   rw mem_ker,
