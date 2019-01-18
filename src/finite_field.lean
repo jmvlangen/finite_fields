@@ -11,8 +11,20 @@ namespace finsupp
 variables {α : Type u} {β : Type v}
 variables [decidable_eq α]
 variables [decidable_eq β] [has_zero β]
+variables (p : α → Prop) [d : decidable_pred p]
 
-def subtype_domain_extend (p : α → Prop) [d : decidable_pred p] (f : subtype p →₀ β) : α →₀ β :=
+variable (s : finset α)
+
+def finsupp_equiv_fintype_domain [h : fintype α] : (α →₀ β) ≃ (α → β) :=
+{ to_fun := finsupp.to_fun,
+  inv_fun := λ f, finsupp.mk (finset.filter (λ a, f a ≠ 0) h.elems) f
+    (assume a, by rw[finset.mem_filter]; apply and_iff_right; exact fintype.complete a),
+  left_inv := λ f, finsupp.ext (λ a, rfl),
+  right_inv := λ f, funext (λ a, rfl) }
+
+include d
+
+def subtype_domain_extend (f : subtype p →₀ β) : α →₀ β :=
 { support            := finset.map ⟨subtype.val, subtype.val_injective⟩ f.support,
   to_fun             := λ a, if hc : p a then f ⟨a, hc⟩ else 0,
   mem_support_to_fun := λ a,
@@ -31,16 +43,15 @@ def subtype_domain_extend (p : α → Prop) [d : decidable_pred p] (f : subtype 
       have h2 : f ⟨a, hp⟩ ≠ 0, by rw[←h1]; exact hne0,
       finset.mem_map_of_mem _ ((mem_support_to_fun f ⟨a, hp⟩).mpr h2)) }
 
-lemma subtype_domain_extend_apply {p : α → Prop} [d : decidable_pred p] {f : subtype p →₀ β} {a : subtype p} :
+lemma subtype_domain_extend_apply {f : subtype p →₀ β} {a : subtype p} :
 (subtype_domain_extend p f) (a.val) = f a := 
 by rw[←subtype.coe_eta a _]; exact dif_pos a.property
 
-lemma subtype_domain_extend_restrict (p : α → Prop) [d : decidable_pred p] (f : α →₀ β)
-(h : ∀ a ∈ f.support, p a) : subtype_domain_extend p (subtype_domain p f) = f :=
-begin
-  apply finsupp.ext,
-  intro a,
-  exact match d a with
+lemma subtype_domain_extend_restrict (f : α →₀ β) (h : ∀ a ∈ f.support, p a) :
+subtype_domain_extend p (subtype_domain p f) = f :=
+finsupp.ext
+  (assume a,
+  match d a with
     | is_false hna :=
       have a ∉ f.support, from assume hs, absurd (h a hs) hna,
       have hf : f a = 0, from not_mem_support_iff.mp this,
@@ -48,41 +59,33 @@ begin
       have hg : g a = 0, from dif_neg hna,
       by rw[hf, hg]
     | is_true ha := have a = (subtype.mk a ha).val, from rfl,
-      by rw[this, subtype_domain_extend_apply, subtype_domain_apply]
-  end
-end
+      by rw[this, subtype_domain_extend_apply p, subtype_domain_apply]
+  end)
 
-lemma subtype_domain_restrict_extend (p : α → Prop) [decidable_pred p] (f : {a // p a} →₀ β):
+lemma subtype_domain_restrict_extend (f : {a // p a} →₀ β) :
 subtype_domain p (subtype_domain_extend p f) = f :=
-by apply finsupp.ext; intro a; rw[subtype_domain_apply, subtype_domain_extend_apply]
+by apply finsupp.ext; intro a; rw[subtype_domain_apply, subtype_domain_extend_apply p]
 
-lemma finsupp_equiv_finset_domain (b : finset α) : {f : α →₀ β // f.support ⊆ b} ≃ ({a // a ∈ b} →₀ β) :=
-{ to_fun    := (finsupp.subtype_domain (λ a, a ∈ b)) ∘ subtype.val,
-  inv_fun   := (λ f, subtype.mk (subtype_domain_extend (λ a, a ∈ b) f)
-    (begin 
-      rw[finset.subset_iff],
-      assume x h,
-      exact match finset.decidable_mem x b with
-        | is_false hnb :=
-          let g := (subtype_domain_extend (λ (a : α), a ∈ b) f) in
-          have g x = 0, from dif_neg hnb,
-          have hn : x ∉ g.support, from not_mem_support_iff.mpr this,
-          absurd h hn
-        | is_true hb := hb
-      end
+def finnsup_equiv_subtype_domain : {f : α →₀ β // ∀ a ∈ f.support, p a} ≃ ({a // p a} →₀ β) :=
+{ to_fun    := (finsupp.subtype_domain p) ∘ subtype.val,
+  inv_fun   := (λ f, subtype.mk (subtype_domain_extend p f)
+    (assume a h,
+    match d a with
+      | is_false hnb :=
+        let g := (subtype_domain_extend p f) in
+        have g a = 0, from dif_neg hnb,
+        have hn : a ∉ g.support, from not_mem_support_iff.mpr this,
+        absurd h hn
+      | is_true hb := hb
     end)),
-  left_inv :=
-    λ f,
-    have h : ∀ (a : α), a ∈ (f.val).support → a ∈ b, from
-      assume a hs, finset.mem_of_subset f.property hs,
-    by rw[subtype.ext]; exact subtype_domain_extend_restrict _ f.val h,
+  left_inv := λ f, by rw[subtype.ext]; exact subtype_domain_extend_restrict _ f.val f.property,
   right_inv := λ f, subtype_domain_restrict_extend _ f }
 
 end finsupp
 
 namespace vector_space
  
-open fintype vector_space cardinal submodule set function
+open fintype vector_space cardinal finsupp
  
 variables (α : Type u) (β : Type v)
 variables [discrete_field α] [fintype α]
@@ -99,7 +102,7 @@ have dim α β < omega, from
            ... = card β        : fintype_card _
            ... < omega         : nat_lt_omega _,
 lt_omega.mp this
- 
+
 --variables (b : set β) (hb : is_basis b)
  
 /-#check fintype.card
@@ -107,26 +110,52 @@ lt_omega.mp this
 #check (module_equiv_lc hb).to_equiv.bijective
 #check linear_map.range_eq_top-/
 
-lemma card_fin_vector_space [decidable_eq β]: ∃ n : ℕ, card β = (card α) ^ n :=
+--set_option class.instance_max_depth 32
+--set_option trace.class_instances true
+--set_option pp.notation false
+--set_option pp.implicit true
+
+lemma card_fun_of_equiv {α : Type*} {β : Type*} {γ : Type*} [fintype α] [fintype β] [fintype γ]
+[decidable_eq β] (f : α ≃ (β → γ)) : card α = card γ ^ card β :=
+calc card α = @card (β → γ) (of_equiv α f) : eq.symm $ of_equiv_card f
+        ... = card (β → γ)                 : by congr
+        ... = card γ ^ card β              : card_fun
+
+lemma card_fin_vector_space : ∃ n : ℕ, card β = (card α) ^ n :=
 let ⟨n, hn⟩ := dim_fin α β in
 ⟨n,
 let ⟨b, hb⟩ := exists_is_basis β in
-have f : β ≃ lc.supported b, from (module_equiv_lc hb).to_equiv,
-have g : lc.supported b ≃ (lc.supported b).carrier, from sorry, --⟨submodule.carrier, ⟩,
-have β ≃ {l : lc α β | ↑l.support ⊆ b}, from equiv.trans f g,
-have bf : finset β, from (finite.of_fintype b).to_finset,
---have {l : β →₀ α | l.support ⊆ bf} ≃ ({a // a ∈ bf} →₀ β), from finsupp.finsupp_equiv_finset_domain bf,
+have heq : (λ l : β →₀ α, ↑l.support ⊆ b) = (λ l, ∀ a ∈ l.support, a ∈ b),
+  from funext (assume l, set.subset_def),
+have deβ : decidable_eq β, from sorry,
+have fb : fintype ↥b, from (set.finite.of_fintype b).fintype,
+have db : decidable_pred (λ a, a ∈ b), from (λ a, @set.decidable_mem_of_fintype _ deβ b fb a),
+have deb : decidable_eq ↥b, from @subtype.decidable_eq _ _ deβ,
+have fb2 : fintype ↥b, from @subtype.fintype _ _ _ db,
+have f : β ≃ (b → α), from
+  calc β ≃ lc.supported b                         : (module_equiv_lc hb).to_equiv
+     ... ≃ {l : lc α β  | ↑l.support ⊆ b}         : equiv.cast $ rfl
+     ... ≃ {l : β →₀ α // ↑l.support ⊆ b}         : by apply equiv.cast; rw[set.set_coe_eq_subtype]; refl
+     ... ≃ {l : β →₀ α // ∀ a ∈ l.support, a ∈ b} : by apply equiv.cast; rw[heq]
+     ... ≃ ({x // x ∈ b} →₀ α)                    : @finnsup_equiv_subtype_domain _ _ deβ _ _ _ db 
+     ... ≃ ({x // x ∈ b} → α)                     : @finsupp_equiv_fintype_domain _ _ deb _ _ fb2
+     ... ≃ (b → α)                                : by apply equiv.cast; refl,
 
-/-have fb : fintype b, from (finite.of_fintype b).fintype,
-have h1 : β ≃ (b → α), from sorry,
-have h2 : n = @fintype.card b fb, from sorry,
-have db : decidable_eq b, from sorry,
-calc card β = @card (b → α) (fintype.of_equiv β h1) : eq.symm $ fintype.of_equiv_card h1
-        ... = card α ^ @card b fb : @fintype.card_fun b α fb db _
-        ... = (card α) ^ n : by rw[h2]-/
-sorry
+have h0 : cardinal.mk ↥b = ↑n, from hn ▸ hb.mk_eq_dim,
+--have nonempty (↥b ≃ fin n), begin rw[←@quotient.eq _ _ ↥b (fin n)],  end,
+have h1 : ↥b ≃ fin n, from sorry,
+have h : @card ↥b fb = n, by rw[←fintype.card_fin n]; apply card_congr; exact h1,
+--have h : @card b fb = cardinal.mk n, from hn, --from hn ▸ hb.mk_eq_dim,
+/-calc card β = @card (b → α) (of_equiv β f) : eq.symm $ of_equiv_card f
+        ... = card (b → α)                 : by congr
+        ... = card α ^ @card b fb          : card_fun
+        ... = (card α) ^ n                 : sorry--by rw[h]-/
+h ▸ @card_fun_of_equiv _ _ _ _ fb _ deb f
 ⟩
- 
+
+variable (b : set β)
+#check has_coe_to_sort b
+
 end vector_space
 
 namespace finite_field
