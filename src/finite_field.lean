@@ -7,19 +7,10 @@ import field
 universes u v w
 
 namespace finsupp
-/-
-(to_fun    : α → β)
-(inv_fun   : β → α)
-(left_inv  : left_inverse inv_fun to_fun)
-(right_inv : right_inverse inv_fun to_fun)
--/
 
 variables {α : Type u} {β : Type v}
 variables [decidable_eq α]
 variables [decidable_eq β] [has_zero β]
-
---instance decidable_mem_fun {α : Type*} [decidable_eq α] (s : finset α): decidable_pred (λ a, a ∈ s) :=
---assume a, finset.decidable_mem a s
 
 def subtype_domain_extend (p : α → Prop) [d : decidable_pred p] (f : subtype p →₀ β) : α →₀ β :=
 { support            := finset.map ⟨subtype.val, subtype.val_injective⟩ f.support,
@@ -40,13 +31,30 @@ def subtype_domain_extend (p : α → Prop) [d : decidable_pred p] (f : subtype 
       have h2 : f ⟨a, hp⟩ ≠ 0, by rw[←h1]; exact hne0,
       finset.mem_map_of_mem _ ((mem_support_to_fun f ⟨a, hp⟩).mpr h2)) }
 
-lemma subtype_domain_extend_restrict (p : α → Prop) [decidable_pred p] (f : α →₀ β):
-subtype_domain_extend p (subtype_domain p f) = f :=
-sorry
+lemma subtype_domain_extend_apply {p : α → Prop} [d : decidable_pred p] {f : subtype p →₀ β} {a : subtype p} :
+(subtype_domain_extend p f) (a.val) = f a := 
+by rw[←subtype.coe_eta a _]; exact dif_pos a.property
+
+lemma subtype_domain_extend_restrict (p : α → Prop) [d : decidable_pred p] (f : α →₀ β)
+(h : ∀ a ∈ f.support, p a) : subtype_domain_extend p (subtype_domain p f) = f :=
+begin
+  apply finsupp.ext,
+  intro a,
+  exact match d a with
+    | is_false hna :=
+      have a ∉ f.support, from assume hs, absurd (h a hs) hna,
+      have hf : f a = 0, from not_mem_support_iff.mp this,
+      let g := (subtype_domain_extend p (subtype_domain p f)) in
+      have hg : g a = 0, from dif_neg hna,
+      by rw[hf, hg]
+    | is_true ha := have a = (subtype.mk a ha).val, from rfl,
+      by rw[this, subtype_domain_extend_apply, subtype_domain_apply]
+  end
+end
 
 lemma subtype_domain_restrict_extend (p : α → Prop) [decidable_pred p] (f : {a // p a} →₀ β):
 subtype_domain p (subtype_domain_extend p f) = f :=
-sorry
+by apply finsupp.ext; intro a; rw[subtype_domain_apply, subtype_domain_extend_apply]
 
 lemma finsupp_equiv_finset_domain (b : finset α) : {f : α →₀ β // f.support ⊆ b} ≃ ({a // a ∈ b} →₀ β) :=
 { to_fun    := (finsupp.subtype_domain (λ a, a ∈ b)) ∘ subtype.val,
@@ -60,10 +68,14 @@ lemma finsupp_equiv_finset_domain (b : finset α) : {f : α →₀ β // f.suppo
           have g x = 0, from dif_neg hnb,
           have hn : x ∉ g.support, from not_mem_support_iff.mpr this,
           absurd h hn
-        | is_true hb   := hb
+        | is_true hb := hb
       end
     end)),
-  left_inv  := λ f, by rw[subtype.ext]; exact subtype_domain_extend_restrict _ f.val,
+  left_inv :=
+    λ f,
+    have h : ∀ (a : α), a ∈ (f.val).support → a ∈ b, from
+      assume a hs, finset.mem_of_subset f.property hs,
+    by rw[subtype.ext]; exact subtype_domain_extend_restrict _ f.val h,
   right_inv := λ f, subtype_domain_restrict_extend _ f }
 
 end finsupp
