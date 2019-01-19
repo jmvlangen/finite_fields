@@ -103,34 +103,21 @@ have dim α β < omega, from
            ... < omega         : nat_lt_omega _,
 lt_omega.mp this
 
---variables (b : set β) (hb : is_basis b)
- 
-/-#check fintype.card
-#check is_basis.repr_range
-#check (module_equiv_lc hb).to_equiv.bijective
-#check linear_map.range_eq_top-/
-
---set_option class.instance_max_depth 32
---set_option trace.class_instances true
---set_option pp.notation false
---set_option pp.implicit true
-
 lemma card_fun_of_equiv {α : Type*} {β : Type*} {γ : Type*} [fintype α] [fintype β] [fintype γ]
 [decidable_eq β] (f : α ≃ (β → γ)) : card α = card γ ^ card β :=
 calc card α = @card (β → γ) (of_equiv α f) : eq.symm $ of_equiv_card f
         ... = card (β → γ)                 : by congr
         ... = card γ ^ card β              : card_fun
 
-lemma card_fin_vector_space : ∃ n : ℕ, card β = (card α) ^ n :=
+lemma card_fin_vector_space [deβ : decidable_eq β] : ∃ n : ℕ, card β = (card α) ^ n :=
 let ⟨n, hn⟩ := dim_fin α β in
 ⟨n,
 let ⟨b, hb⟩ := exists_is_basis β in
 have heq : (λ l : β →₀ α, ↑l.support ⊆ b) = (λ l, ∀ a ∈ l.support, a ∈ b),
   from funext (assume l, set.subset_def),
-have deβ : decidable_eq β, from sorry,
 have fb : fintype ↥b, from (set.finite.of_fintype b).fintype,
 have db : decidable_pred (λ a, a ∈ b), from (λ a, @set.decidable_mem_of_fintype _ deβ b fb a),
-have deb : decidable_eq ↥b, from @subtype.decidable_eq _ _ deβ,
+have deb : decidable_eq ↥b, from subtype.decidable_eq,
 have fb2 : fintype ↥b, from @subtype.fintype _ _ _ db,
 have f : β ≃ (b → α), from
   calc β ≃ lc.supported b                         : (module_equiv_lc hb).to_equiv
@@ -140,21 +127,10 @@ have f : β ≃ (b → α), from
      ... ≃ ({x // x ∈ b} →₀ α)                    : @finnsup_equiv_subtype_domain _ _ deβ _ _ _ db 
      ... ≃ ({x // x ∈ b} → α)                     : @finsupp_equiv_fintype_domain _ _ deb _ _ fb2
      ... ≃ (b → α)                                : by apply equiv.cast; refl,
-
-have h0 : cardinal.mk ↥b = ↑n, from hn ▸ hb.mk_eq_dim,
---have nonempty (↥b ≃ fin n), begin rw[←@quotient.eq _ _ ↥b (fin n)],  end,
-have h1 : ↥b ≃ fin n, from sorry,
-have h : @card ↥b fb = n, by rw[←fintype.card_fin n]; apply card_congr; exact h1,
---have h : @card b fb = cardinal.mk n, from hn, --from hn ▸ hb.mk_eq_dim,
-/-calc card β = @card (b → α) (of_equiv β f) : eq.symm $ of_equiv_card f
-        ... = card (b → α)                 : by congr
-        ... = card α ^ @card b fb          : card_fun
-        ... = (card α) ^ n                 : sorry--by rw[h]-/
-h ▸ @card_fun_of_equiv _ _ _ _ fb _ deb f
-⟩
-
-variable (b : set β)
-#check has_coe_to_sort b
+have h : @card ↥b fb = n,
+by rw[←card_fin n, card_eq, ←cardinal.lift_mk_eq, cardinal.lift_mk_fin,
+  is_basis.mk_eq_dim hb, lift_id _]; assumption,
+h ▸ @card_fun_of_equiv _ _ _ _ fb _ deb f⟩
 
 end vector_space
 
@@ -179,7 +155,7 @@ lemma char_ideal_ne_zero : ∃ p : ℕ, char_ideal α = span {(p : ℤ)} ∧ nat
 let ⟨p, hspan, hp⟩ := int.prime_ideal_eq_nℤ (char_ideal α) in
 or.elim hp
   (assume h0 : p = 0,
-  have char_ideal α = ⊥, by rw [hspan, span_singleton_eq_bot]; simpa,
+  have char_ideal α = ⊥, by rw[hspan]; exact span_singleton_eq_bot.mpr (congr_arg coe h0),
   have function.injective int.cast, from (@is_ring_hom.ker_eq_bot ℤ α _ _ int.cast _).mp this,
   absurd this set.not_injective_int_fintype)
   (assume h : nat.prime p, ⟨p, hspan, h⟩)
@@ -215,7 +191,7 @@ have ∀ x : ℤ, x ∈ (char_ideal α) → ι x = 0, from
   have ι x ∈ (⊥ : ideal α), from set.mem_preimage_eq.mp hI,
   show ι x = 0, from submodule.mem_bot.mp this,
 have V : vector_space (prime_field α) α, from @vector_space.mk (prime_field α) α finite_field.prime_field_is_discrete_field _ _,
-let ⟨n, h⟩ := @vector_space.card_fin_vector_space (prime_field α) α _ _ _ _ V in
+let ⟨n, h⟩ := @vector_space.card_fin_vector_space (prime_field α) α _ _ _ _ V _ in
 ⟨card (prime_field α), n, card_prime_field_prime, h⟩
 
 theorem exists_fin_field : ∀ p n : ℕ, prime p → ∃ α : Type*, ∃ [hf : field α], ∃ [hfin : fintype α], @card α hfin = p^n :=
