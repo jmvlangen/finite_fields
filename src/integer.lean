@@ -114,7 +114,7 @@ have h₁ : fintype.card (ℤmodnℤ n) = fintype.card (zmod n), from (fintype.o
 have h₂ : fintype.card (zmod n) = n, from zmod.card_zmod n,
 show fintype.card (ℤmodnℤ n) = n, from eq.trans h₁ h₂
 
--- def ℤmodnℤ_equiv_zmodp (p : ℕ) (hp : nat.prime p) : (ℤmodnℤ p) ≃r zmodp p hp :=
--- ℤmodnℤ_equiv_zmod ⟨p, hp.pos⟩
+--def ℤmodnℤ_equiv_zmodp (p : ℕ) (hp : nat.prime p) : (ℤmodnℤ p) ≃r zmodp p hp :=
+--ℤmodnℤ_equiv_zmod ⟨p, hp.pos⟩
 
 end int

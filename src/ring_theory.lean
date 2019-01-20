@@ -30,6 +30,16 @@ have x ∈ I, from classical.not_not.mp (not_not_of_not_imp h₁),
 have x ≠ 0, from not_of_not_imp h₁,
 show ∃ x ∈ I, (x : α) ≠ 0, from ⟨x, ‹x ∈ I›, ‹x ≠ 0›⟩
 
+instance bot_is_prime {α : Type u} [integral_domain α] :
+is_prime (⊥ : ideal α) :=
+begin
+apply and.intro bot_ne_top,
+intros x y h,
+repeat {rw[submodule.mem_bot]},
+exact no_zero_divisors.eq_zero_or_eq_zero_of_mul_eq_zero x y
+  (submodule.mem_bot.mp h)
+end
+
 end ideal
 
 namespace is_ring_hom
@@ -111,11 +121,10 @@ iff.intro
    show y ∈ ker f, from sub_add_cancel y y' ▸ (ker f).add this hy')
 
 /-- The first isomorphism theorem for rings --/
-theorem factor_injective (h : I = ker f) : injective (factor f I (h ▸ le_refl I)) :=
+theorem factor_injective : injective (factor f (ker f) (le_refl (ker f))) :=
 begin
   apply ker_eq_bot.mp,
   rw ker_factor,
-  rw ←h,
   exact map_mk_eq_bot
 end
 
@@ -126,11 +135,11 @@ let ⟨x, hfx⟩ := this in
 have (factor f I h) (ideal.quotient.mk I x) = y, from hfx ▸ factor_commutes h,
 show ∃ x' : quotient I, (factor f I h) x' = y, from ⟨ideal.quotient.mk I x, this⟩
 
-theorem factor_bijective (h : I = ker f) (hf : surjective f) :
-                         bijective (factor f I (h ▸ le_refl I)) :=
-⟨factor_injective h, factor_surjective (h ▸ le_refl I) hf⟩
+theorem factor_bijective (hf : surjective f) :
+  bijective (factor f (ker f) (le_refl (ker f))) :=
+⟨factor_injective, factor_surjective (le_refl (ker f)) hf⟩
 
-noncomputable theorem factor_iso (h : I = ker f) (hf : surjective f) : quotient I ≃r β :=
-ring_equiv.mk (equiv.of_bijective (factor_bijective h hf)) factor_to_ring_hom'
+noncomputable theorem factor_iso (hf : surjective f) : quotient (ker f) ≃r β :=
+ring_equiv.mk (equiv.of_bijective (factor_bijective hf)) factor_to_ring_hom'
 
 end is_ring_hom

@@ -128,7 +128,7 @@ have f : β ≃ (b → α), from
      ... ≃ ({x // x ∈ b} → α)                     : @finsupp_equiv_fintype_domain _ _ deb _ _ fb2
      ... ≃ (b → α)                                : by apply equiv.cast; refl,
 have h : @card ↥b fb = n,
-by rw[←card_fin n, card_eq, ←cardinal.lift_mk_eq, cardinal.lift_mk_fin,
+by rw[←card_fin n, card_eq, ←lift_mk_eq, lift_mk_fin,
   is_basis.mk_eq_dim hb, lift_id _]; assumption,
 h ▸ @card_fun_of_equiv _ _ _ _ fb _ deb f⟩
 
@@ -136,22 +136,63 @@ end vector_space
 
 namespace finite_field
 
-open fintype field ring ideal is_group_hom
+open fintype
 
-variables {α : Type u} {β : Type v}
-variables [discrete_field α] [fintype α]
-variables [field β] [fintype β]
+section prime_field
 
-def char_ideal (α : Type u) [discrete_field α] [fintype α] : ideal ℤ :=
+open ideal is_group_hom
+
+variables {α : Type u} [integral_domain α] [fintype α] [decidable_eq α]
+
+def char_ideal (α : Type u) [integral_domain α] [fintype α] : ideal ℤ :=
 is_ring_hom.ker (int.cast : ℤ → α)
 
-def prime_field (α : Type u) [discrete_field α] [fintype α] : Type :=
+def prime_field (α : Type u) [integral_domain α] [fintype α] : Type :=
 quotient (char_ideal α)
 
 instance char_ideal_is_prime : is_prime (char_ideal α) :=
-@is_prime.comap _ _ _ _ int.cast _ _ field.bot_is_prime
+@is_prime.comap _ _ _ _ int.cast _ _ ideal.bot_is_prime
 
-lemma char_ideal_ne_zero : ∃ p : ℕ, char_ideal α = span {(p : ℤ)} ∧ nat.prime p :=
+lemma char_ideal_nonzero (α : Type u) [integral_domain α] [fintype α] [decidable_eq α]
+: char_ideal α ≠ (⊥ : ideal ℤ) :=
+assume h,
+have function.injective int.cast, from (@is_ring_hom.ker_eq_bot ℤ α _ _ int.cast _).mp h,
+absurd this set.not_injective_int_fintype
+
+lemma int_is_max_of_is_prime (I : ideal ℤ) [is_prime I] (hn : I ≠ (⊥ : ideal ℤ)) :
+is_maximal I :=
+let ⟨p, h, h0p⟩ := int.prime_ideal_eq_nℤ I in
+or.elim h0p
+  (assume h0,
+  have I = ⊥, by rw[h]; exact span_singleton_eq_bot.mpr (congr_arg coe h0),
+  absurd this hn)
+  (assume hp, eq.symm h ▸ int.nℤ_maximal p hp)
+
+instance char_ideal_is_maximal : is_maximal (char_ideal α) :=
+int_is_max_of_is_prime _ (char_ideal_nonzero α)
+
+noncomputable instance prime_field_is_field : field (prime_field α) :=
+quotient.field (char_ideal α)
+
+lemma decidable_mem_ideal {α : Type u} [comm_ring α] (I : ideal α) [decidable_pred (I : set α)] :
+decidable_rel (@has_equiv.equiv α (@setoid_has_equiv _ (submodule.quotient_rel I))) := 
+λ x y, (@set.decidable_mem α (I : set α) _ (x - y))
+
+lemma decidable_mem_ker {α : Type u} {β : Type v} [comm_ring α] [comm_ring β] [d : decidable_eq β]
+{f : α → β} [is_ring_hom f] : decidable_pred (λ a, a ∈ is_ring_hom.ker f) :=
+assume a, by simp; rw[is_ring_hom.mem_ker]; exact d (f a) 0
+
+lemma prime_field_has_decidable_eq : decidable_eq (prime_field α) :=
+@quotient.decidable_eq ℤ (submodule.quotient_rel _)
+  (@decidable_mem_ideal _ _  (char_ideal α) decidable_mem_ker)
+
+noncomputable instance prime_field_is_discrete_field : discrete_field (prime_field α) :=
+{ has_decidable_eq := prime_field_has_decidable_eq,
+  inv_zero := sorry,
+  ..finite_field.prime_field_is_field }
+
+lemma char_ideal_gen_prime (α : Type u) [integral_domain α] [fintype α] [decidable_eq α]
+: ∃ p : ℕ, (char_ideal α = int.nℤ p) ∧ nat.prime p :=
 let ⟨p, hspan, hp⟩ := int.prime_ideal_eq_nℤ (char_ideal α) in
 or.elim hp
   (assume h0 : p = 0,
@@ -160,32 +201,29 @@ or.elim hp
   absurd this set.not_injective_int_fintype)
   (assume h : nat.prime p, ⟨p, hspan, h⟩)
 
-instance char_ideal_is_maximal : is_maximal (char_ideal α) :=
-let ⟨p, h, hp⟩ := @char_ideal_ne_zero α _ _ in
-eq.symm h ▸ int.nℤ_maximal p hp
-
-noncomputable instance prime_field_is_field : field (prime_field α) :=
-quotient.field (char_ideal α)
-
---need [decidable (λ a, a ∈ I)]
---comes from ker
-lemma decidable_mem_ideal {α : Type*} [comm_ring α] [decidable_eq α] (I : ideal α) :
-decidable_rel (λ x y, x - y ∈ I) := sorry
-
-noncomputable instance prime_field_is_discrete_field : discrete_field (prime_field α) :=
-{ has_decidable_eq := @quotient.decidable_eq ℤ (submodule.quotient_rel _) (decidable_mem_ideal _),
-  inv_zero := sorry,
-  ..finite_field.prime_field_is_field }
-
-instance prime_field_fintype : fintype (prime_field α) := sorry
+instance : fintype (prime_field α) := sorry
+/-let ⟨p, h, hp⟩ := @char_ideal_ne_zero α _ _ _ in
+begin
+  apply fintype.of_equiv (zmod ⟨p, hp.pos⟩),
+  apply equiv.symm,
+  unfold prime_field int.ℤmodnℤ,
+  rw[h],
+  exact (int.ℤmodnℤ_equiv_zmod _).to_equiv
+end-/
 
 lemma card_prime_field_prime : nat.prime (card (prime_field α)) := sorry
 
-instance prime_field_module : module (prime_field α) α := sorry
+instance : module (prime_field α) α := sorry
+
+end prime_field
+
+variables {α : Type u} {β : Type v}
+variables [discrete_field α] [fintype α]
+variables [field β] [fintype β]
 
 theorem fin_field_card (α : Type*) [discrete_field α] [fintype α] : ∃ p n : ℕ, nat.prime p ∧ card α = p^n :=
 let ι : ℤ → α := int.cast in
-let ⟨p, hc, hp⟩ := @char_ideal_ne_zero α _ _ in
+let ⟨p, hc, hp⟩ := char_ideal_gen_prime α in
 have ∀ x : ℤ, x ∈ (char_ideal α) → ι x = 0, from
   assume x hI,
   have ι x ∈ (⊥ : ideal α), from set.mem_preimage_eq.mp hI,
