@@ -110,8 +110,6 @@ lemma card_fin_vector_space [deβ : decidable_eq β] : ∃ n : ℕ, card β = (c
 let ⟨n, hn⟩ := dim_fin α β in
 ⟨n,
 let ⟨b, hb⟩ := exists_is_basis β in
-have heq : (λ l : β →₀ α, ↑l.support ⊆ b) = (λ l, ∀ a ∈ l.support, a ∈ b),
-  from funext (assume l, set.subset_def),
 have fb : fintype ↥b, from (set.finite.of_fintype b).fintype,
 have db : decidable_pred (λ a, a ∈ b), from (λ a, @set.decidable_mem_of_fintype _ deβ b fb a),
 have deb : decidable_eq ↥b, from subtype.decidable_eq,
@@ -120,7 +118,7 @@ have f : β ≃ (b → α), from
   calc β ≃ lc.supported b                         : (module_equiv_lc hb).to_equiv
      ... ≃ {l : lc α β  | ↑l.support ⊆ b}         : equiv.cast $ rfl
      ... ≃ {l : β →₀ α // ↑l.support ⊆ b}         : by apply equiv.cast; rw[set.set_coe_eq_subtype]; refl
-     ... ≃ {l : β →₀ α // ∀ a ∈ l.support, a ∈ b} : by apply equiv.cast; rw[heq]
+     ... ≃ {l : β →₀ α // ∀ a ∈ l.support, a ∈ b} : equiv.cast $ rfl
      ... ≃ ({x // x ∈ b} →₀ α)                    : @finnsup_equiv_subtype_domain _ _ deβ _ _ _ db 
      ... ≃ ({x // x ∈ b} → α)                     : @finsupp_equiv_fintype_domain _ _ deb _ _ fb2
      ... ≃ (b → α)                                : by apply equiv.cast; refl,
