@@ -16,8 +16,50 @@ sorry
 lemma ring_char_prime [fintype α] : nat.prime (ring_char α) :=
 sorry
 
-instance zmodp_module_pos_char {hp : nat.prime (ring_char α)} : module (zmodp (ring_char α) hp) α :=
-sorry
+--set_option pp.notation false
+--set_option pp.implicit true
+instance zmod_ring_hom {h : ring_char α > 0} :
+is_ring_hom (nat.cast ∘ fin.val : zmod ⟨ring_char α, h⟩ → α) :=
+{ map_one := have h1 : (1 : ℕ) < (⟨ring_char α, h⟩ : ℕ+),
+    from or.elim (@ring_char_prime_or_zero α _)
+      (assume hp, nat.prime.gt_one hp)
+      (assume h0, absurd h0 (ne_of_gt h)),
+    begin
+      unfold function.comp,
+      rw[←nat.cast_one, zmod.val_cast_of_lt h1],
+      exact nat.cast_one
+    end,
+  map_mul := λ {x y}, show (↑(x * y).val : α) = ↑x.val * ↑y.val,     
+    begin
+      rw[←nat.cast_mul],
+      rw[zmod.mul_val],
+      --rw[subtype.coe_mk (ring_char α) h],
+      sorry
+    end,
+  map_add := λ x y, sorry }
+
+instance zmod_smul_ring_hom {h : ring_char α > 0} {r : zmod ⟨ring_char α, h⟩} :
+is_ring_hom (λ x : α, (nat.cast ∘ fin.val) r * x) := sorry
+
+--noncomputable instance zmod_scalar_pos_char {h : ring_char α > 0} :
+--has_scalar (zmod ⟨ring_char α, h⟩) α :=
+--{ smul := λ n a, (nat.cast ∘ fin.val) n * a }
+
+open is_ring_hom
+
+--set_option pp.notation false
+
+noncomputable instance zmod_module_pos_char {h : ring_char α > 0} :
+module (zmod ⟨ring_char α, h⟩) α :=
+module.of_core
+{ smul := λ r x, (nat.cast ∘ fin.val) r * x,
+  smul_add := λ r x y, map_add _,
+  add_smul := λ r s x, show (nat.cast ∘ fin.val) (r + s) * x = _,
+    by rw[@map_add _ _ _ _ (nat.cast ∘ fin.val) zmod_ring_hom _ _, add_mul], 
+  mul_smul := λ r s x, show (nat.cast ∘ fin.val) (r * s) * x = _,
+    by rw[@map_mul _ _ _ _ (nat.cast ∘ fin.val) zmod_ring_hom _ _, mul_assoc], 
+  one_smul := λ x, show (nat.cast ∘ fin.val) 1 * x = _,
+    by rw[@map_one _ _ _ _ (nat.cast ∘ fin.val) zmod_ring_hom, one_mul] }
 
 end integral_domain
 
@@ -33,7 +75,7 @@ theorem fin_field_card (α : Type*) [discrete_field α] [fintype α] :
 ∃ p n : ℕ, nat.prime p ∧ card α = p^n :=
 let F := zmodp (ring_char α) ring_char_prime in
 have hp : nat.prime (card F) := by simp; exact ring_char_prime,
-have V : vector_space F α, from @vector_space.mk F α _ _ zmodp_module_pos_char,
+have V : vector_space F α, from @vector_space.mk F α _ _ zmod_module_pos_char,
 let ⟨n, h⟩ := @vector_space.card_fin_vector_space F α _ _ _ _ V _ in
 ⟨card F, n, hp, h⟩
 
