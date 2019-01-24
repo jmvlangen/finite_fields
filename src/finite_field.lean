@@ -6,13 +6,71 @@ import vector_space
 
 universes u v
 
+namespace char_p
+
+variable {α : Type u}
+variable [ring α]
+
+open nat
+
+lemma char_p_eq_mod (n : ℕ) [char_p α n] (k : ℕ) : (k : α) = (k % n : ℕ) :=
+calc
+  (k : α) = (k % n + n * (k / n) : ℕ)   : by rw [mod_add_div k n]
+      ... = ↑(k % n) + ↑(n * (k / n)) : by rw [cast_add (k % n) (n * (k / n))]
+      ... = ↑(k % n) + 0               : by rw [(cast_eq_zero_iff α n (n * (k / n))).mpr (dvd_mul_right n (k / n))]
+      ... = ↑(k % n)                   : by rw [add_zero]
+
+end char_p
+
+namespace zmod
+
+variable {n : ℕ+}
+variable (α : Type u)
+variables [ring α] [char_p α n]
+
+open char_p nat
+
+def cast : zmod n → α := nat.cast ∘ fin.val
+
+instance cast_is_ring_hom : is_ring_hom (cast α) :=
+{ map_one := 
+    calc
+      ((1 : zmod n).val : α) = ↑(1 % n : ℕ) : rfl
+                         ... = ↑(1 : ℕ)     : eq.symm (char_p_eq_mod n 1)
+                         ... = (1 : α)       : cast_one,
+  map_mul := assume x y : zmod n,
+    calc
+      ↑((x * y).val) = ↑((x.val * y.val) % n) : by rw [zmod.mul_val x y]
+                  ... = ↑(x.val * y.val)       : eq.symm (char_p_eq_mod n (x.val * y.val))
+                  ... = ↑(x.val) * ↑(y.val)   : cast_mul x.val y.val,
+  map_add := assume x y : zmod n,
+    calc
+      (↑((x + y).val) : α) = ↑((x.val + y.val) % n) : by rw [zmod.add_val x y]
+                        ... = ↑(x.val + y.val)       : eq.symm (char_p_eq_mod n _)
+                        ... = ↑(x.val) + ↑(y.val)   : cast_add x.val y.val}
+
+open is_ring_hom
+
+instance to_module [char_p α n] : module (zmod n) α :=
+module.of_core
+{ smul := λ r x, (cast α) r * x,
+  smul_add := λ r x y, by unfold has_scalar.smul; rw[mul_add]; refl,
+  add_smul := λ r s x, by unfold has_scalar.smul;
+    rw[map_add (cast α), add_mul]; apply_instance,
+  mul_smul := λ r s x, by unfold has_scalar.smul;
+    rw[map_mul (cast α), mul_assoc]; apply_instance,
+  one_smul := λ x, show (cast α) 1 * x = _,
+    by rw[map_one (cast α), one_mul]; apply_instance }
+
+end zmod
+
 section integral_domain
 
-variables {α : Type u} [integral_domain α]
+variables (α : Type u) [integral_domain α]
 
 open nat function
 
-lemma char_p_prime_or_zero {p : ℕ} [char_p α p]: nat.prime p ∨ p = 0 :=
+lemma char_p_prime_or_zero (p : ℕ) [char_p α p]: nat.prime p ∨ p = 0 :=
 or.elim (nat.eq_zero_or_eq_succ_pred p)
   (assume h₀ : p = 0,
    show nat.prime p ∨ p = 0, from or.inr h₀)
@@ -59,8 +117,8 @@ or.elim (nat.eq_zero_or_eq_succ_pred p)
       have nat.prime p, from ⟨‹p ≥ 2›, this⟩,
       show nat.prime p ∨ p = 0, from or.inl this))
 
-lemma char_p_prime [fintype α] [decidable_eq α] {p : ℕ} [char_p α p] : nat.prime p :=
-have nat.prime p ∨ p = 0, from @char_p_prime_or_zero α _ p _,
+lemma char_p_prime [fintype α] [decidable_eq α] (p : ℕ) [char_p α p] : nat.prime p :=
+have nat.prime p ∨ p = 0, from char_p_prime_or_zero α p,
 or.elim this
    (assume h : nat.prime p,
     show nat.prime p, from h)
@@ -75,50 +133,6 @@ or.elim this
     have ht : injective ι, from @cast_injective α _ _ this,
     have hf : ¬injective ι, from set.not_injective_nat_fintype,
     absurd ht hf)
-
-instance ring_hom_pos_char {p : ℕ} [char_p α p] {h : p > 0} :
-is_ring_hom (nat.cast ∘ fin.val : zmod ⟨p, h⟩ → α) :=
-{ map_one := have h1 : (1 : ℕ) < (⟨p, h⟩ : ℕ+),
-    from or.elim (@char_p_prime_or_zero α _ p _)
-      (assume hp, nat.prime.gt_one hp)
-      (assume h0, absurd h0 (ne_of_gt h)),
-    begin
-      unfold function.comp,
-      rw[←nat.cast_one, zmod.val_cast_of_lt h1],
-      exact nat.cast_one
-    end,
-  map_mul := λ {x y}, show (↑(x * y).val : α) = ↑x.val * ↑y.val, from
-    begin
-      rw[←nat.cast_mul],
-      rw[←nat.mod_add_div(x.val * y.val) p],
-      rw[zmod.mul_val],
-      simp,
-      rw[(char_p.cast_eq_zero_iff α p p).mpr $ dvd_refl _],
-      rw[zero_mul, add_zero]
-    end,
-  map_add := λ x y, show (↑(x + y).val : α) = ↑x.val + ↑y.val, from
-    begin
-      rw[←nat.cast_add],
-      rw[←nat.mod_add_div(x.val + y.val) p],
-      rw[zmod.add_val],
-      simp,
-      rw[(char_p.cast_eq_zero_iff α p p).mpr $ dvd_refl _],
-      rw[zero_mul, add_zero]
-    end }
-
-open is_ring_hom
-
-instance zmod_module_pos_char {p : ℕ} [char_p α p] {h : p > 0} :
-module (zmod ⟨p, h⟩) α :=
-module.of_core
-{ smul := λ r x, (nat.cast ∘ fin.val) r * x,
-  smul_add := λ r x y, by unfold has_scalar.smul; rw[mul_add]; refl,
-  add_smul := λ r s x, by unfold has_scalar.smul;
-    rw[@map_add _ _ _ _ (nat.cast ∘ fin.val) ring_hom_pos_char _ _, add_mul]; apply_instance,
-  mul_smul := λ r s x, by unfold has_scalar.smul;
-    rw[@map_mul _ _ _ _ (nat.cast ∘ fin.val) ring_hom_pos_char _ _, mul_assoc]; apply_instance,
-  one_smul := λ x, show (nat.cast ∘ fin.val) 1 * x = _,
-    by rw[@map_one _ _ _ _ (nat.cast ∘ fin.val) ring_hom_pos_char, one_mul]; apply_instance }
 
 end integral_domain
 
@@ -135,7 +149,7 @@ theorem fin_field_card (α : Type u) [discrete_field α] [fintype α] :
 begin
   haveI := (⟨ring_char.spec α⟩ : char_p α (ring_char α)),
   let F := zmodp (ring_char α) (@char_p_prime α _ _ _ _ _),
-  have V : vector_space F α, from @vector_space.mk F α _ _ zmod_module_pos_char,
+  have V : vector_space F α, from @vector_space.mk F α _ _ (sorry), 
   cases @vector_space.card_fin_vector_space F α _ _ _ _ V _ with n h,
   have hn : n > 0, from or.resolve_left (nat.eq_zero_or_pos n)
     (assume h0,
