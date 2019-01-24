@@ -12,53 +12,52 @@ variables {α : Type u} [integral_domain α]
 
 open nat
 
-lemma ring_char_prime_or_zero : nat.prime (ring_char α) ∨ ring_char α = 0 :=
-let r := ring_char α in
-or.elim (nat.eq_zero_or_eq_succ_pred r)
-  (assume h₀ : r = 0,
-   show nat.prime r ∨ r = 0, from or.inr h₀)
-  (assume h₀ : r = succ (pred r),
-   or.elim (nat.eq_zero_or_eq_succ_pred (pred r))
-     (assume h₁ : pred r = 0,
-      have r = 1, from (h₁ ▸ h₀ : r = succ 0),
-      have r ∣ 1, from eq.symm this ▸ one_dvd 1,
+lemma ring_char_prime_or_zero {p : ℕ} [char_p α p]: nat.prime p ∨ p = 0 :=
+or.elim (nat.eq_zero_or_eq_succ_pred p)
+  (assume h₀ : p = 0,
+   show nat.prime p ∨ p = 0, from or.inr h₀)
+  (assume h₀ : p = succ (pred p),
+   or.elim (nat.eq_zero_or_eq_succ_pred (pred p))
+     (assume h₁ : pred p = 0,
+      have p = 1, from (h₁ ▸ h₀ : p = succ 0),
+      have p ∣ 1, from eq.symm this ▸ one_dvd 1,
       have (nat.cast 1 : α) = 0, from (ring_char.spec α 1).mpr this,
       have (1 : α) = 0, from @cast_one α _ _ ▸ this,
       absurd this one_ne_zero)
-     (assume h₁ : pred r = succ (pred (pred r)),
-      have r = (succ $ succ $ pred $ pred r), from h₁ ▸ h₀,
-      have r ≥ 2, from eq.symm this ▸ (succ_le_succ $ succ_le_succ $ nat.zero_le (pred (pred r))),
-      have ∀ d ∣ r, d = 1 ∨ d = r, from
+     (assume h₁ : pred p = succ (pred (pred p)),
+      have p = (succ $ succ $ pred $ pred p), from h₁ ▸ h₀,
+      have p ≥ 2, from eq.symm this ▸ (succ_le_succ $ succ_le_succ $ nat.zero_le (pred (pred p))),
+      have ∀ d ∣ p, d = 1 ∨ d = p, from
         assume d : ℕ,
-        assume hdvd : ∃ e : ℕ, r = d * e,
+        assume hdvd : ∃ e : ℕ, p = d * e,
         let ⟨e, hmul⟩ := hdvd in
-        have r > 0, from gt_of_ge_of_gt ‹r ≥ 2› (nat.zero_lt_succ 1),
-        have (r : α) = 0, from (ring_char.spec α r).mpr (dvd_refl r),
+        have p > 0, from gt_of_ge_of_gt ‹p ≥ 2› (nat.zero_lt_succ 1),
+        have (p : α) = 0, from (char_p.cast_eq_zero_iff α p p).mpr (dvd_refl p),
         have (d : α) * e = 0, from (@cast_mul α _ d e) ▸ (hmul ▸ this),
         or.elim (no_zero_divisors.eq_zero_or_eq_zero_of_mul_eq_zero (d : α) e this)
           (assume hd : (d : α) = 0,
-           have r ∣ d, from (ring_char.spec α d).mp hd,
-           have d > 0, from pos_of_dvd_of_pos hdvd ‹r > 0›, 
-           have d ≥ r, from le_of_dvd ‹d > 0› ‹r ∣ d›,
-           have d ≤ r, from le_of_dvd ‹r > 0› ‹d ∣ r›,
-           have d = r, from eq_iff_le_not_lt.mpr ⟨‹d ≤ r›, not_lt_of_ge ‹d ≥ r›⟩,
-           show d = 1 ∨ d = r, from or.inr ‹d = r›)
+           have p ∣ d, from (char_p.cast_eq_zero_iff α p d).mp hd,
+           have d > 0, from pos_of_dvd_of_pos hdvd ‹p > 0›, 
+           have d ≥ p, from le_of_dvd ‹d > 0› ‹p ∣ d›,
+           have d ≤ p, from le_of_dvd ‹p > 0› ‹d ∣ p›,
+           have d = p, from eq_iff_le_not_lt.mpr ⟨‹d ≤ p›, not_lt_of_ge ‹d ≥ p›⟩,
+           show d = 1 ∨ d = p, from or.inr ‹d = p›)
           (assume he : (e : α) = 0,
-           have r ∣ e, from (ring_char.spec α e).mp he,
-           have e ∣ r, from dvd_of_mul_left_eq d (eq.symm hmul),
-           have e > 0, from pos_of_dvd_of_pos ‹e ∣ r› ‹r > 0›,
-           have e ≥ r, from le_of_dvd ‹e > 0› ‹r ∣ e›,
-           have e ≤ r, from le_of_dvd ‹r > 0› ‹e ∣ r›,
-           have e = r, from eq_iff_le_not_lt.mpr ⟨‹e ≤ r›, not_lt_of_ge ‹e ≥ r›⟩,
-           have d * r = 1 * r, from
+           have p ∣ e, from (char_p.cast_eq_zero_iff α p e).mp he,
+           have e ∣ p, from dvd_of_mul_left_eq d (eq.symm hmul),
+           have e > 0, from pos_of_dvd_of_pos ‹e ∣ p› ‹p > 0›,
+           have e ≥ p, from le_of_dvd ‹e > 0› ‹p ∣ e›,
+           have e ≤ p, from le_of_dvd ‹p > 0› ‹e ∣ p›,
+           have e = p, from eq_iff_le_not_lt.mpr ⟨‹e ≤ p›, not_lt_of_ge ‹e ≥ p›⟩,
+           have d * p = 1 * p, from
              calc
-               d * r = d * e : by rw ‹e = r›
-                 ... = r     : by rw hmul
-                 ... = 1 * r : by rw one_mul, 
-           have d = 1, from nat.eq_of_mul_eq_mul_right ‹r > 0› this,
-           show d = 1 ∨ d = r, from or.inl ‹d = 1›),
-      have nat.prime r, from ⟨‹r ≥ 2›, this⟩,
-      show nat.prime r ∨ r = 0, from or.inl this))
+               d * p = d * e : by rw ‹e = p›
+                 ... = p     : by rw hmul
+                 ... = 1 * p : by rw one_mul, 
+           have d = 1, from nat.eq_of_mul_eq_mul_right ‹p > 0› this,
+           show d = 1 ∨ d = p, from or.inl ‹d = 1›),
+      have nat.prime p, from ⟨‹p ≥ 2›, this⟩,
+      show nat.prime p ∨ p = 0, from or.inl this))
 
 lemma char_p_prime [fintype α] {p : ℕ} [char_p α p] : nat.prime p :=
 sorry
