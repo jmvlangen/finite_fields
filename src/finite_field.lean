@@ -114,27 +114,47 @@ open fintype
 
 variables {α : Type u} {β : Type v}
 variables [discrete_field α] [fintype α]
-variables [field β] [fintype β]
+variables [discrete_field β] [fintype β]
 
 theorem fin_field_card (α : Type u) [discrete_field α] [fintype α] :
-∃ n : ℕ, card α = (ring_char α)^n :=
+∃ n : ℕ+, card α = (ring_char α)^(n : ℕ) :=
 begin
   haveI := (⟨ring_char.spec α⟩ : char_p α (ring_char α)),
   let F := zmodp (ring_char α) (@char_p_prime α _ _ _ _),
   have V : vector_space F α, from @vector_space.mk F α _ _ zmod_module_pos_char,
   cases @vector_space.card_fin_vector_space F α _ _ _ _ V _ with n h,
-  exact ⟨n, fintype.card_fin (ring_char α) ▸ h⟩
+  have hn : n > 0, from or.resolve_left (nat.eq_zero_or_pos n)
+    (assume h0,
+    have card α = 1, by rw[←nat.pow_zero (card F), ←h0]; exact h,
+    have (1 : α) = 0, from (fintype.card_le_one_iff.mp (le_of_eq this)) 1 0,
+    absurd this one_ne_zero),
+  exact ⟨⟨n, hn⟩, fintype.card_fin (ring_char α) ▸ h⟩
 end
 
 theorem fin_field_card' (α : Type u) [discrete_field α] [fintype α] :
-∃ p n : ℕ, nat.prime p ∧ card α = p^n :=
+∃ (p : ℕ) (n : ℕ+), nat.prime p ∧ card α = p^(n : ℕ) :=
 let ⟨n, h⟩ := fin_field_card α in
 ⟨ring_char α, n, @char_p_prime α _ _ (ring_char α) ⟨ring_char.spec α⟩, h⟩
 
-theorem exists_fin_field : ∀ p n : ℕ, prime p → ∃ α : Type*, ∃ [hf : field α], ∃ [hfin : fintype α], @card α hfin = p^n :=
+theorem finite_field.exists : ∀ (p : ℕ) (n : ℕ+), nat.prime p →
+∃ (α : Type*) [hf : field α] [hfin : fintype α], @card α hfin = p^(n : ℕ) :=
 sorry
 
-theorem unique_fin_field [field α] [field β] : card α = card β → (α ≃r β) :=
+theorem finite_field.unique : card α = card β → (α ≃r β) :=
 sorry
+
+
+def fin_field (p : ℕ) (n : ℕ+) {hp : nat.prime p} :=
+classical.some (finite_field.exists p n hp)
+
+notation `𝔽_[` p `;` n `]` := fin_field p n --find better notation?
+
+variables {p : ℕ} {n : ℕ+} {hp : nat.prime p}
+
+noncomputable instance : field 𝔽_[p;n] :=
+classical.some (classical.some_spec (finite_field.exists p n hp))
+
+noncomputable instance : fintype 𝔽_[p;n] :=
+classical.some (classical.some_spec $ classical.some_spec (finite_field.exists p n hp))
 
 end finite_field
