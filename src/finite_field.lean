@@ -58,7 +58,7 @@ or.elim (nat.eq_zero_or_eq_succ_pred r)
            have d = 1, from nat.eq_of_mul_eq_mul_right ‹r > 0› this,
            show d = 1 ∨ d = r, from or.inl ‹d = 1›),
       have nat.prime r, from ⟨‹r ≥ 2›, this⟩,
-      show nat.prime r ∨ r = 0, from or.inl this)
+      show nat.prime r ∨ r = 0, from or.inl this))
 
 lemma ring_char_prime [fintype α] : nat.prime (ring_char α) :=
 sorry
