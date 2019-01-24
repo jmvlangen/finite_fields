@@ -106,7 +106,7 @@ calc card α = @card (β → γ) (of_equiv α f) : eq.symm $ of_equiv_card f
         ... = card (β → γ)                 : by congr
         ... = card γ ^ card β              : card_fun
 
-lemma card_fin_vector_space [deβ : decidable_eq β] : ∃ n : ℕ, card β = (card α) ^ n :=
+lemma card_fin [deβ : decidable_eq β] : ∃ n : ℕ, card β = (card α) ^ n :=
 let ⟨n, hn⟩ := dim_fin α β in
 ⟨n,
 let ⟨b, hb⟩ := exists_is_basis β in

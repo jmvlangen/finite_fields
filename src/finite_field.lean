@@ -162,7 +162,7 @@ begin
   haveI := (⟨ring_char.spec α⟩ : char_p α ↑(⟨r, hp.pos⟩ : ℕ+)),
   let F := zmodp r hp,
   haveI := @vector_space.mk F α _ _ (zmod.to_module α), 
-  cases vector_space.card_fin_vector_space F α with n h,
+  cases vector_space.card_fin F α with n h,
   have hn : n > 0, from or.resolve_left (nat.eq_zero_or_pos n)
     (assume h0,
     have card α = 1, by rw[←nat.pow_zero (card F), ←h0]; exact h,
