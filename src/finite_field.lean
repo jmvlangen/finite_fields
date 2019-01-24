@@ -64,6 +64,23 @@ module.of_core
 
 end zmod
 
+namespace nat
+
+lemma eq_of_dvd_of_dvd {m n : ℕ} : m ∣ n → n ∣ m → m = n :=
+assume h₁ : m ∣ n,
+assume h₂ : n ∣ m,
+or.elim (eq_zero_or_pos m)
+  (assume hm : m = 0,
+   have hn : n = 0, from eq_zero_of_zero_dvd (hm ▸ h₁),
+   show m = n, from eq.symm hn ▸ hm)
+  (assume hm : m > 0,
+   have hn : n > 0, from pos_of_dvd_of_pos h₂ hm,
+   have m ≤ n, from le_of_dvd hn h₁,
+   have m ≥ n, from le_of_dvd hm h₂,
+   show m = n, from eq_iff_le_not_lt.mpr ⟨‹m ≤ n›, not_lt_of_ge ‹m ≥ n›⟩)
+
+end nat
+
 section integral_domain
 
 variables (α : Type u) [integral_domain α]
@@ -95,18 +112,12 @@ or.elim (nat.eq_zero_or_eq_succ_pred p)
         or.elim (no_zero_divisors.eq_zero_or_eq_zero_of_mul_eq_zero (d : α) e this)
           (assume hd : (d : α) = 0,
            have p ∣ d, from (char_p.cast_eq_zero_iff α p d).mp hd,
-           have d > 0, from pos_of_dvd_of_pos hdvd ‹p > 0›, 
-           have d ≥ p, from le_of_dvd ‹d > 0› ‹p ∣ d›,
-           have d ≤ p, from le_of_dvd ‹p > 0› ‹d ∣ p›,
-           have d = p, from eq_iff_le_not_lt.mpr ⟨‹d ≤ p›, not_lt_of_ge ‹d ≥ p›⟩,
+           have d = p, from eq_of_dvd_of_dvd ‹d ∣ p› ‹p ∣ d›,
            show d = 1 ∨ d = p, from or.inr ‹d = p›)
           (assume he : (e : α) = 0,
            have p ∣ e, from (char_p.cast_eq_zero_iff α p e).mp he,
            have e ∣ p, from dvd_of_mul_left_eq d (eq.symm hmul),
-           have e > 0, from pos_of_dvd_of_pos ‹e ∣ p› ‹p > 0›,
-           have e ≥ p, from le_of_dvd ‹e > 0› ‹p ∣ e›,
-           have e ≤ p, from le_of_dvd ‹p > 0› ‹e ∣ p›,
-           have e = p, from eq_iff_le_not_lt.mpr ⟨‹e ≤ p›, not_lt_of_ge ‹e ≥ p›⟩,
+           have e = p, from eq_of_dvd_of_dvd ‹e ∣ p› ‹p ∣ e›,
            have d * p = 1 * p, from
              calc
                d * p = d * e : by rw ‹e = p›
@@ -119,9 +130,7 @@ or.elim (nat.eq_zero_or_eq_succ_pred p)
 
 lemma char_p_prime [fintype α] [decidable_eq α] (p : ℕ) [char_p α p] : nat.prime p :=
 have nat.prime p ∨ p = 0, from char_p_prime_or_zero α p,
-or.elim this
-   (assume h : nat.prime p,
-    show nat.prime p, from h)
+or.resolve_right this
    (assume h : p = 0,
     let ι : ℕ → α := nat.cast in
     have ∀ n : ℕ, (n : α) = 0 → n = 0, from
