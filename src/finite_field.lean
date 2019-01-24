@@ -10,7 +10,7 @@ section integral_domain
 
 variables {α : Type u} [integral_domain α]
 
-open nat
+open nat function
 
 lemma char_p_prime_or_zero {p : ℕ} [char_p α p]: nat.prime p ∨ p = 0 :=
 or.elim (nat.eq_zero_or_eq_succ_pred p)
@@ -59,8 +59,22 @@ or.elim (nat.eq_zero_or_eq_succ_pred p)
       have nat.prime p, from ⟨‹p ≥ 2›, this⟩,
       show nat.prime p ∨ p = 0, from or.inl this))
 
-lemma char_p_prime [fintype α] {p : ℕ} [char_p α p] : nat.prime p :=
-sorry
+lemma char_p_prime [fintype α] [decidable_eq α] {p : ℕ} [char_p α p] : nat.prime p :=
+have nat.prime p ∨ p = 0, from @char_p_prime_or_zero α _ p _,
+or.elim this
+   (assume h : nat.prime p,
+    show nat.prime p, from h)
+   (assume h : p = 0,
+    let ι : ℕ → α := nat.cast in
+    have ∀ n : ℕ, (n : α) = 0 → n = 0, from
+      assume n : ℕ,
+      assume h₀ : (n : α) = 0,
+      have 0 ∣ n, from h ▸ (char_p.cast_eq_zero_iff α p n).mp h₀, 
+      show n = 0, from zero_dvd_iff.mp this,
+    have char_zero α, from add_group.char_zero_of_inj_zero this,
+    have ht : injective ι, from @cast_injective α _ _ this,
+    have hf : ¬injective ι, from set.not_injective_nat_fintype,
+    absurd ht hf)
 
 instance ring_hom_pos_char {p : ℕ} [char_p α p] {h : p > 0} :
 is_ring_hom (nat.cast ∘ fin.val : zmod ⟨p, h⟩ → α) :=
@@ -120,7 +134,7 @@ theorem fin_field_card (α : Type u) [discrete_field α] [fintype α] :
 ∃ n : ℕ+, card α = (ring_char α)^(n : ℕ) :=
 begin
   haveI := (⟨ring_char.spec α⟩ : char_p α (ring_char α)),
-  let F := zmodp (ring_char α) (@char_p_prime α _ _ _ _),
+  let F := zmodp (ring_char α) (@char_p_prime α _ _ _ _ _),
   have V : vector_space F α, from @vector_space.mk F α _ _ zmod_module_pos_char,
   cases @vector_space.card_fin_vector_space F α _ _ _ _ V _ with n h,
   have hn : n > 0, from or.resolve_left (nat.eq_zero_or_pos n)
@@ -134,7 +148,7 @@ end
 theorem fin_field_card' (α : Type u) [discrete_field α] [fintype α] :
 ∃ (p : ℕ) (n : ℕ+), nat.prime p ∧ card α = p^(n : ℕ) :=
 let ⟨n, h⟩ := fin_field_card α in
-⟨ring_char α, n, @char_p_prime α _ _ (ring_char α) ⟨ring_char.spec α⟩, h⟩
+⟨ring_char α, n, @char_p_prime α _ _ _ (ring_char α) ⟨ring_char.spec α⟩, h⟩
 
 theorem finite_field.exists : ∀ (p : ℕ) (n : ℕ+), nat.prime p →
 ∃ (α : Type*) [hf : field α] [hfin : fintype α], @card α hfin = p^(n : ℕ) :=
