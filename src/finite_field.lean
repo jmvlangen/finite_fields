@@ -14,11 +14,10 @@ variable [ring α]
 open nat
 
 lemma char_p_eq_mod (n : ℕ) [char_p α n] (k : ℕ) : (k : α) = (k % n : ℕ) :=
-calc
-  (k : α) = (k % n + n * (k / n) : ℕ)   : by rw [mod_add_div k n]
-      ... = ↑(k % n) + ↑(n * (k / n)) : by rw [cast_add (k % n) (n * (k / n))]
-      ... = ↑(k % n) + 0               : by rw [(cast_eq_zero_iff α n (n * (k / n))).mpr (dvd_mul_right n (k / n))]
-      ... = ↑(k % n)                   : by rw [add_zero]
+calc (k : α) = (k % n + n * (k / n) : ℕ) : by rw [mod_add_div]
+         ... = ↑(k % n) + ↑n * ↑(k / n)  : by rw [cast_add, cast_mul]
+         ... = ↑(k % n) + 0              : by rw [char_p.cast_eq_zero α n, zero_mul]
+         ... = ↑(k % n)                  : by rw [add_zero]
 
 end char_p
 
@@ -64,23 +63,6 @@ module.of_core
 
 end zmod
 
-namespace nat
-
-lemma eq_of_dvd_of_dvd {m n : ℕ} : m ∣ n → n ∣ m → m = n :=
-assume h₁ : m ∣ n,
-assume h₂ : n ∣ m,
-or.elim (eq_zero_or_pos m)
-  (assume hm : m = 0,
-   have hn : n = 0, from eq_zero_of_zero_dvd (hm ▸ h₁),
-   show m = n, from eq.symm hn ▸ hm)
-  (assume hm : m > 0,
-   have hn : n > 0, from pos_of_dvd_of_pos h₂ hm,
-   have m ≤ n, from le_of_dvd hn h₁,
-   have m ≥ n, from le_of_dvd hm h₂,
-   show m = n, from eq_iff_le_not_lt.mpr ⟨‹m ≤ n›, not_lt_of_ge ‹m ≥ n›⟩)
-
-end nat
-
 section integral_domain
 
 variables (α : Type u) [integral_domain α]
@@ -112,12 +94,12 @@ or.elim (nat.eq_zero_or_eq_succ_pred p)
         or.elim (no_zero_divisors.eq_zero_or_eq_zero_of_mul_eq_zero (d : α) e this)
           (assume hd : (d : α) = 0,
            have p ∣ d, from (char_p.cast_eq_zero_iff α p d).mp hd,
-           have d = p, from eq_of_dvd_of_dvd ‹d ∣ p› ‹p ∣ d›,
+           have d = p, from dvd_antisymm ‹d ∣ p› ‹p ∣ d›,
            show d = 1 ∨ d = p, from or.inr ‹d = p›)
           (assume he : (e : α) = 0,
            have p ∣ e, from (char_p.cast_eq_zero_iff α p e).mp he,
            have e ∣ p, from dvd_of_mul_left_eq d (eq.symm hmul),
-           have e = p, from eq_of_dvd_of_dvd ‹e ∣ p› ‹p ∣ e›,
+           have e = p, from dvd_antisymm ‹e ∣ p› ‹p ∣ e›,
            have d * p = 1 * p, from
              calc
                d * p = d * e : by rw ‹e = p›
@@ -156,11 +138,10 @@ variables [discrete_field β] [fintype β]
 theorem fin_field_card (α : Type u) [discrete_field α] [fintype α] :
 ∃ n : ℕ+, card α = (ring_char α)^(n : ℕ) :=
 begin
-  let r := ring_char α,
-  haveI := (⟨ring_char.spec α⟩ : char_p α r),
-  have hp : nat.prime r, from char_p_prime α r,
-  haveI := (⟨ring_char.spec α⟩ : char_p α ↑(⟨r, hp.pos⟩ : ℕ+)),
-  let F := zmodp r hp,
+  haveI := (⟨ring_char.spec α⟩ : char_p α (ring_char α)),
+  have hp : nat.prime (ring_char α), from char_p_prime α (ring_char α),
+  haveI := (⟨ring_char.spec α⟩ : char_p α ↑(⟨ring_char α, hp.pos⟩ : ℕ+)),
+  let F := zmodp (ring_char α) hp,
   haveI := @vector_space.mk F α _ _ (zmod.to_module α), 
   cases vector_space.card_fin F α with n h,
   have hn : n > 0, from or.resolve_left (nat.eq_zero_or_pos n)
