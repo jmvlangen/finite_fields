@@ -21,6 +21,8 @@ def finsupp_equiv_fintype_domain [h : fintype α] : (α →₀ β) ≃ (α → �
 
 include d
 
+/-- `subtype_domain_extend f` is the extension of the finitely supported function
+  `f` on the subtype `p` to the finitely supported function by extending by zero. -/
 def subtype_domain_extend (f : subtype p →₀ β) : α →₀ β :=
 { support            := finset.map ⟨subtype.val, subtype.val_injective⟩ f.support,
   to_fun             := λ a, if hc : p a then f ⟨a, hc⟩ else 0,
@@ -28,17 +30,16 @@ def subtype_domain_extend (f : subtype p →₀ β) : α →₀ β :=
     iff.intro
       (assume hmap,
       let ⟨ap, hsup, hs⟩ := finset.mem_map.mp hmap in
-      have hp : p a, by rw[←hs]; exact ap.property,
-      have ap = ⟨a, hp⟩, by rw[subtype.ext]; exact hs,
+      have hp : p a, from hs ▸ ap.property,
+      have ap = ⟨a, hp⟩, by rwa[subtype.ext],
       by rw [dif_pos hp, ←this]; exact (mem_support_to_fun f ap).mp hsup)
       (assume hne0,
       have hp : p a, from match d a with
         | is_false hnp := absurd (dif_neg hnp) hne0
         | is_true  hp  := hp
       end,
-      have h1 : (if hc : p a then f ⟨a, hc⟩ else 0) = f ⟨a, hp⟩, from dif_pos hp,
-      have h2 : f ⟨a, hp⟩ ≠ 0, by rw[←h1]; exact hne0,
-      finset.mem_map_of_mem _ ((mem_support_to_fun f ⟨a, hp⟩).mpr h2)) }
+      have h : f ⟨a, hp⟩ ≠ 0, by rwa (dif_pos hp) at hne0,
+      finset.mem_map_of_mem _ ((mem_support_to_fun f ⟨a, hp⟩).mpr h)) }
 
 lemma subtype_domain_extend_apply {f : subtype p →₀ β} {a : subtype p} :
 (subtype_domain_extend p f) (a.val) = f a := 
@@ -52,8 +53,7 @@ finsupp.ext
     | is_false hna :=
       have a ∉ f.support, from assume hs, absurd (h a hs) hna,
       have hf : f a = 0, from not_mem_support_iff.mp this,
-      let g := (subtype_domain_extend p (subtype_domain p f)) in
-      have hg : g a = 0, from dif_neg hna,
+      have hg : (subtype_domain_extend p (subtype_domain p f)) a = 0, from dif_neg hna,
       by rw[hf, hg]
     | is_true ha := have a = (subtype.mk a ha).val, from rfl,
       by rw[this, subtype_domain_extend_apply p, subtype_domain_apply]

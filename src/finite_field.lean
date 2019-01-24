@@ -1,7 +1,7 @@
 import algebra.char_p
 import data.zmod.basic
+import data.equiv.algebra
 
-import field
 import vector_space
 
 universes u v
