@@ -26,13 +26,13 @@ namespace zmod
 
 variable {n : ℕ+}
 variable (α : Type u)
-variables [ring α] [char_p α n]
+variables [ring α]
 
 open char_p nat
 
 def cast : zmod n → α := nat.cast ∘ fin.val
 
-instance cast_is_ring_hom : is_ring_hom (cast α) :=
+instance cast_is_ring_hom [char_p α n] : is_ring_hom (cast α) :=
 { map_one := 
     calc
       ((1 : zmod n).val : α) = ↑(1 % n : ℕ) : rfl
@@ -147,10 +147,13 @@ variables [discrete_field β] [fintype β]
 theorem fin_field_card (α : Type u) [discrete_field α] [fintype α] :
 ∃ n : ℕ+, card α = (ring_char α)^(n : ℕ) :=
 begin
-  haveI := (⟨ring_char.spec α⟩ : char_p α (ring_char α)),
-  let F := zmodp (ring_char α) (@char_p_prime α _ _ _ _ _),
-  have V : vector_space F α, from @vector_space.mk F α _ _ (sorry), 
-  cases @vector_space.card_fin_vector_space F α _ _ _ _ V _ with n h,
+  let r := ring_char α,
+  haveI := (⟨ring_char.spec α⟩ : char_p α r),
+  have hp : nat.prime r, from char_p_prime α r,
+  haveI := (⟨ring_char.spec α⟩ : char_p α ↑(⟨r, hp.pos⟩ : ℕ+)),
+  let F := zmodp r hp,
+  haveI := @vector_space.mk F α _ _ (zmod.to_module α), 
+  cases vector_space.card_fin_vector_space F α with n h,
   have hn : n > 0, from or.resolve_left (nat.eq_zero_or_pos n)
     (assume h0,
     have card α = 1, by rw[←nat.pow_zero (card F), ←h0]; exact h,
