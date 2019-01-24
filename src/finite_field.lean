@@ -12,7 +12,7 @@ variables {α : Type u} [integral_domain α]
 
 open nat
 
-lemma ring_char_prime_or_zero {p : ℕ} [char_p α p]: nat.prime p ∨ p = 0 :=
+lemma char_p_prime_or_zero {p : ℕ} [char_p α p]: nat.prime p ∨ p = 0 :=
 or.elim (nat.eq_zero_or_eq_succ_pred p)
   (assume h₀ : p = 0,
    show nat.prime p ∨ p = 0, from or.inr h₀)
@@ -21,7 +21,7 @@ or.elim (nat.eq_zero_or_eq_succ_pred p)
      (assume h₁ : pred p = 0,
       have p = 1, from (h₁ ▸ h₀ : p = succ 0),
       have p ∣ 1, from eq.symm this ▸ one_dvd 1,
-      have (nat.cast 1 : α) = 0, from (ring_char.spec α 1).mpr this,
+      have (nat.cast 1 : α) = 0, from (char_p.cast_eq_zero_iff α p 1).mpr this,
       have (1 : α) = 0, from @cast_one α _ _ ▸ this,
       absurd this one_ne_zero)
      (assume h₁ : pred p = succ (pred (pred p)),
