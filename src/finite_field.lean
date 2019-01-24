@@ -10,7 +10,7 @@ section integral_domain
 
 variables {α : Type u} [integral_domain α]
 
-open nat
+open nat function
 
 lemma ring_char_prime_or_zero : nat.prime (ring_char α) ∨ ring_char α = 0 :=
 let r := ring_char α in
@@ -60,9 +60,24 @@ or.elim (nat.eq_zero_or_eq_succ_pred r)
       have nat.prime r, from ⟨‹r ≥ 2›, this⟩,
       show nat.prime r ∨ r = 0, from or.inl this))
 
-lemma ring_char_prime [fintype α] : nat.prime (ring_char α) :=
-sorry
-
+lemma ring_char_prime [fintype α] [decidable_eq α] : nat.prime (ring_char α) :=
+let r := ring_char α in
+have nat.prime r ∨ r = 0, from ring_char_prime_or_zero,
+or.elim this
+   (assume h : nat.prime r,
+    show nat.prime r, from h)
+   (assume h : r = 0,
+    let ι : ℕ → α := nat.cast in
+    have ∀ n : ℕ, (n : α) = 0 → n = 0, from
+      assume n : ℕ,
+      assume h₀ : (n : α) = 0,
+      have 0 ∣ n, from h ▸ (ring_char.spec α n).mp h₀, 
+      show n = 0, from zero_dvd_iff.mp this,
+    have char_zero α, from add_group.char_zero_of_inj_zero this,
+    have ht : injective ι, from @cast_injective α _ _ this,
+    have hf : ¬injective ι, from set.not_injective_nat_fintype,
+    absurd ht hf)
+    
 --set_option pp.notation false
 --set_option pp.implicit true
 instance zmod_ring_hom {h : ring_char α > 0} :
