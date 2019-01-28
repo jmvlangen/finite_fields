@@ -69,13 +69,23 @@ def equiv_fun [h : fintype β] : (β →₀ α) ≃ₗ (β → α) :=
 variable [add_comm_group β]
 variable [module α β]
 
+set_option pp.implicit true
+
 noncomputable def equiv_lc {s : set β} [decidable_pred s] : (s →₀ α) ≃ₗ lc.supported s :=
 {
   to_fun := λ f, ⟨map_domain subtype.val f,
     assume a h,
     have h0 : a ∈ image _ _, from mem_of_subset map_domain_support h,
     let ⟨ap, _, hs⟩ := mem_image.mp h0 in hs ▸ ap.property⟩,
-  add := λ f g, begin sorry end,
+  add := λ f g, begin
+      rw subtype.coe_ext,
+      rw subtype.coe_mk,
+      rw finsupp.map_domain_add,
+      rw submodule.coe_add,
+      rw subtype.coe_mk,
+      rw subtype.coe_mk,
+      sorry, --refl
+    end,
   smul := sorry,
   inv_fun := (finsupp.subtype_domain s) ∘ subtype.val,
   left_inv := restrict_extend _,
