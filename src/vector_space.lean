@@ -16,8 +16,15 @@ variable (s : finset α)
 
 lemma map_domain_apply {α₁ α₂ : Type*} [decidable_eq α₁] [decidable_eq α₂]
 (v : α₁ → α₂) (f : α₁ →₀ β) (h : function.injective v) {a : α₁} :
-(map_domain v f) (v a) = f a :=
-sorry
+(map_domain v f) (v a) = f a := show (f.sum $ λ x, single (v x)) (v a) = f a,
+begin
+  rw[←sum_single f],
+  simp,
+  apply sum_congr, refl,
+  intros,
+  simp[single_apply, function.injective.eq_iff h],
+  congr
+end
 
 include d
 
