@@ -75,10 +75,9 @@ have (↑1 : α) = 0, from (cast_eq_zero_iff α p 1).mpr (hp ▸ (dvd_refl p)),
 have ( 1 : α) = 0, from @cast_one α _ _ ▸ this,
 absurd this one_ne_zero
 
-lemma char_p_prime_of_gt_two (p : ℕ) [hc : char_p α p] (hp : p ≥ 2) : nat.prime p :=
+lemma char_p_prime_of_ge_two (p : ℕ) [hc : char_p α p] (hp : p ≥ 2) : nat.prime p :=
 suffices ∀d ∣ p, d = 1 ∨ d = p, from ⟨hp, this⟩,
-assume d : ℕ,
-assume hdvd : ∃ e, p = d * e,
+assume (d : ℕ) (hdvd : ∃ e, p = d * e),
 let ⟨e, hmul⟩ := hdvd in
 have (p : α) = 0, from (cast_eq_zero_iff α p p).mpr (dvd_refl p),
 have (d : α) * e = 0, from (@cast_mul α _ d e) ▸ (hmul ▸ this),
@@ -92,27 +91,29 @@ or.elim (no_zero_divisors.eq_zero_or_eq_zero_of_mul_eq_zero (d : α) e this)
   have e = p, from dvd_antisymm ‹e ∣ p› ‹p ∣ e›,
   have h₀ : p > 0, from gt_of_ge_of_gt hp (nat.zero_lt_succ 1),
   have d * p = 1 * p, by rw ‹e = p› at hmul; rw [one_mul]; exact eq.symm hmul,
-  have d = 1, from eq_of_mul_eq_mul_right h₀ (this),
-  show d = 1 ∨ d = p, from or.inl this)
+  show d = 1 ∨ d = p, from or.inl $ eq_of_mul_eq_mul_right h₀ this)
 
 lemma char_p_prime_or_zero (p : ℕ) [hc : char_p α p] : nat.prime p ∨ p = 0 :=
 match p, hc with
 | 0,     _  := or.inr rfl
 | 1,     hc := absurd (eq.refl (1 : ℕ)) (@char_p_ne_one α _ (1 : ℕ) hc)
-| (m+2), hc := or.inl (@char_p_prime_of_gt_two α _ (m+2) hc (nat.le_add_left 2 m))
+| (m+2), hc := or.inl (@char_p_prime_of_ge_two α _ (m+2) hc (nat.le_add_left 2 m))
 end
 
+lemma char_p_ne_zero [fintype α] [decidable_eq α] (p : ℕ) [char_p α p] : p ≠ 0 :=
+(assume h : p = 0,
+have ∀ n : ℕ, (n : α) = 0 → n = 0, from
+  assume (n : ℕ) (h₀ : (n : α) = 0),
+  have 0 ∣ n, from h ▸ (cast_eq_zero_iff α p n).mp h₀, 
+  show n = 0, from zero_dvd_iff.mp this,
+have char_zero α, from add_group.char_zero_of_inj_zero this,
+have ht :  injective nat.cast, from @cast_injective α _ _ this,
+have hf : ¬injective nat.cast, from @set.not_injective_nat_fintype α _ _ _,
+absurd ht hf)
+
 lemma char_p_prime [fintype α] [decidable_eq α] (p : ℕ) [char_p α p] : nat.prime p :=
-or.resolve_right (char_p_prime_or_zero α p)
-   (assume h : p = 0,
-    have ∀ n : ℕ, (n : α) = 0 → n = 0, from
-      assume (n : ℕ) (h₀ : (n : α) = 0),
-      have 0 ∣ n, from h ▸ (cast_eq_zero_iff α p n).mp h₀, 
-      show n = 0, from zero_dvd_iff.mp this,
-    have char_zero α, from add_group.char_zero_of_inj_zero this,
-    have ht :  injective nat.cast, from @cast_injective α _ _ this,
-    have hf : ¬injective nat.cast, from @set.not_injective_nat_fintype α _ _ _,
-    absurd ht hf)
+or.resolve_right (char_p_prime_or_zero α p) (char_p_ne_zero α p)
+   
 
 end integral_domain
 
