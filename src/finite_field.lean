@@ -69,30 +69,37 @@ variables (α : Type u) [integral_domain α]
 
 open nat function char_p
 
+lemma char_p_ne_one (p : ℕ) [hc : char_p α p] : p ≠ 1 :=
+assume hp : p = 1,
+have (↑1 : α) = 0, from (cast_eq_zero_iff α p 1).mpr (hp ▸ (dvd_refl p)),
+have ( 1 : α) = 0, from @cast_one α _ _ ▸ this,
+absurd this one_ne_zero
+
+lemma char_p_prime_of_gt_two (p : ℕ) [hc : char_p α p] (hp : p ≥ 2) : nat.prime p :=
+suffices ∀d ∣ p, d = 1 ∨ d = p, from ⟨hp, this⟩,
+assume d : ℕ,
+assume hdvd : ∃ e, p = d * e,
+let ⟨e, hmul⟩ := hdvd in
+have (p : α) = 0, from (cast_eq_zero_iff α p p).mpr (dvd_refl p),
+have (d : α) * e = 0, from (@cast_mul α _ d e) ▸ (hmul ▸ this),
+or.elim (no_zero_divisors.eq_zero_or_eq_zero_of_mul_eq_zero (d : α) e this)
+  (assume hd : (d : α) = 0,
+  have p ∣ d, from (cast_eq_zero_iff α p d).mp hd,
+  show d = 1 ∨ d = p, from or.inr (dvd_antisymm ⟨e, hmul⟩ this))
+  (assume he : (e : α) = 0,
+  have p ∣ e, from (cast_eq_zero_iff α p e).mp he,
+  have e ∣ p, from dvd_of_mul_left_eq d (eq.symm hmul),
+  have e = p, from dvd_antisymm ‹e ∣ p› ‹p ∣ e›,
+  have h₀ : p > 0, from gt_of_ge_of_gt hp (nat.zero_lt_succ 1),
+  have d * p = 1 * p, by rw ‹e = p› at hmul; rw [one_mul]; exact eq.symm hmul,
+  have d = 1, from eq_of_mul_eq_mul_right h₀ (this),
+  show d = 1 ∨ d = p, from or.inl this)
+
 lemma char_p_prime_or_zero (p : ℕ) [hc : char_p α p] : nat.prime p ∨ p = 0 :=
 match p, hc with
-| 0,      _                    := or.inr rfl
-| 1,      (h : char_p α 1)     := or.inr $
-  have (↑1 : α) = 0, from (@cast_eq_zero_iff α _ 1 h 1).mpr (dvd_refl 1),
-  have ( 1 : α) = 0, from (@cast_one α _ _) ▸ this,
-  absurd this one_ne_zero
-| (m+2),  (h : char_p α (m+2)) := or.inl $
-  begin
-    constructor,
-    { rw[add_comm], exact le_add_right 2 m },
-    { intros d hdvd,
-      cases hdvd with e hmul,
-      have : (↑(m+2) : α) = 0, from (@cast_eq_zero_iff α _ (m+2) h (m+2)).mpr (dvd_refl (m+2)),
-      have : (d : α) * e = 0, from (@cast_mul α _ d e) ▸ (hmul ▸ this),
-      cases no_zero_divisors.eq_zero_or_eq_zero_of_mul_eq_zero (d : α) e this with hd he,
-        { have : m + 2 ∣ d, from (@cast_eq_zero_iff α _ (m+2) h d).mp hd, 
-          exact or.inr (dvd_antisymm ⟨e, hmul⟩ this) },
-        { have he1 : (m+2) ∣ e, from (@cast_eq_zero_iff α _ _ h e).mp he,
-          have he2 : e ∣ (m+2), from dvd_of_mul_left_eq d (eq.symm hmul),
-          have : e = (m+2), from dvd_antisymm he2 he1,
-          rw[←one_mul (m+2), this] at hmul,
-          exact or.inl (nat.eq_of_mul_eq_mul_right (zero_lt_succ (m+1)) (eq.symm hmul)) } }
-  end
+| 0,     _  := or.inr rfl
+| 1,     hc := absurd (eq.refl (1 : ℕ)) (@char_p_ne_one α _ (1 : ℕ) hc)
+| (m+2), hc := or.inl (@char_p_prime_of_gt_two α _ (m+2) hc (nat.le_add_left 2 m))
 end
 
 lemma char_p_prime [fintype α] [decidable_eq α] (p : ℕ) [char_p α p] : nat.prime p :=
