@@ -30,7 +30,10 @@ include d
 
 lemma extend_restrict (f : {f : α →₀ β // ∀ a ∈ f.support, p a}) :
 map_domain subtype.val (subtype_domain p f.val) = f :=
-finsupp.ext $ λ a, sorry
+finsupp.ext $ λ a, begin
+--rw[map_domain_apply],
+sorry
+end
 
 lemma restrict_extend (f : subtype p →₀ β) :
 subtype_domain p (map_domain subtype.val f) = f :=
@@ -65,33 +68,17 @@ open finset
 
 def equiv_lc {s : set β} [decidable_pred s] :
 (s →₀ α) ≃ lc.supported s :=
-{
-  to_fun := λ f, ⟨map_domain subtype.val f,
+{ to_fun := λ f, ⟨map_domain subtype.val f,
     assume a h,
     have h0 : a ∈ image _ _, from mem_of_subset map_domain_support h,
     let ⟨ap, _, hs⟩ := mem_image.mp h0 in hs ▸ ap.property⟩,
   inv_fun := (finsupp.subtype_domain s) ∘ subtype.val,
   left_inv := restrict_extend _,
-  right_inv := λ f, subtype.eq $ extend_restrict _ f,
-}
+  right_inv := λ f, subtype.eq $ extend_restrict _ f }
 
 end finsupp
 
-namespace fintype
-
-variables {α : Type*} {β : Type*} {γ : Type*}
-variables [fintype α] [fintype β] [fintype γ]
-
-lemma card_eq_of_equiv_fun [decidable_eq β] (f : α ≃ (β → γ)) :
-card α = card γ ^ card β :=
-calc card α = card (β → γ)    : card_congr f
-        ... = card γ ^ card β : card_fun
-
-end fintype
-
 namespace module
-
-open set
 
 variables {α : Type u} {β : Type v}
 variables [ring α] [decidable_eq α]
@@ -101,24 +88,20 @@ variables {b : set β}
 include α β
 
 noncomputable def equiv_finsupp_basis [decidable_pred b] (h : is_basis b) : β ≃ (b →₀ α) :=
-calc
-    β ≃ lc.supported b : (module_equiv_lc h).to_equiv
-  ... ≃ (b →₀ α)       : equiv.symm finsupp.equiv_lc
+calc β ≃ lc.supported b : (module_equiv_lc h).to_equiv
+   ... ≃ (b →₀ α)       : equiv.symm finsupp.equiv_lc
 
 noncomputable def equiv_fun_basis [decidable_pred b] [fintype b] (h : is_basis b) : β ≃ (b → α) := 
-calc
-    β ≃ (b →₀ α) : equiv_finsupp_basis h
-  ... ≃ (b → α)  : finsupp.equiv_fun
+calc β ≃ (b →₀ α) : equiv_finsupp_basis h
+   ... ≃ (b → α)  : finsupp.equiv_fun
 
-open cardinal fintype
-
-noncomputable def basis_is_finite [fintype β] (h : is_basis b) : fintype b :=
-set.finite.fintype (set.finite.of_fintype b)
+open fintype
 
 lemma card_of_basis [fintype α] [fintype β] [hf : fintype b] (h : is_basis b) : 
 card β = (card α)^(card b) :=
-have db : decidable_pred b, from set.decidable_mem_of_fintype b,
-card_eq_of_equiv_fun (@equiv_fun_basis _ _ _ _ _ _ _ _ db _ h)
+by haveI : decidable_pred b := set.decidable_mem_of_fintype b;
+exact calc card β = card (b → α)    : card_congr (equiv_fun_basis h)
+              ... = card α ^ card b : card_fun 
 
 end module
 
@@ -133,7 +116,7 @@ variables [vector_space α β]
 
 lemma card_fin [deβ : decidable_eq β] : ∃ n : ℕ, card β = (card α) ^ n :=
 let ⟨b, hb⟩ := exists_is_basis β in
-have hf : fintype b, from basis_is_finite hb,
+have hf : fintype b, from set.finite.fintype (set.finite.of_fintype b),
 ⟨@card b hf, @card_of_basis _ _ _ _ _ _ _ _ _ _ hf hb⟩
 
 end vector_space 
