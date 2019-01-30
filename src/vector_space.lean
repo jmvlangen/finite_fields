@@ -29,10 +29,22 @@ end
 include d
 
 lemma extend_restrict (f : {f : α →₀ β // ∀ a ∈ f.support, p a}) :
-map_domain subtype.val (subtype_domain p f.val) = f :=
-finsupp.ext $ λ a, begin
---rw[map_domain_apply],
-sorry
+map_domain subtype.val (subtype_domain p f.val) = f.val :=
+finsupp.ext $ λ a, match d a with
+| is_true  (hp : p a)  := by rw[←subtype.coe_mk _ hp];
+  exact map_domain_apply _ _ subtype.val_injective
+| is_false (hp : ¬p a) :=
+  have a ∉ f.val.support, from mt (f.property a) hp,
+  have h0 : f.val a = 0, from of_not_not $ mt ((f.val.mem_support_to_fun a).mpr) this,
+  begin
+    rw[h0],
+    apply of_not_not,
+    apply mt (mem_support_to_fun _ _).mpr,
+    apply mt (finset.mem_of_subset map_domain_support),
+    simp,
+    assume x _ hfx hxa,
+    exact absurd h0 (hxa ▸ hfx)
+  end
 end
 
 lemma restrict_extend (f : subtype p →₀ β) :
