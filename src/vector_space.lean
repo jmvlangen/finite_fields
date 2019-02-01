@@ -7,6 +7,7 @@ namespace finsupp
 
 open finset
 
+--finsupp or fintype
 def equiv_fun {α : Type u} {β : Type v} [decidable_eq α] [has_zero α] [h : fintype β] :
 (β →₀ α) ≃ (β → α) :=
 { to_fun := finsupp.to_fun,
@@ -21,6 +22,7 @@ variables [decidable_eq β] [add_comm_group β]
 
 variable (s : finset α)
 
+--with map_domain
 lemma map_domain_apply {α₁ α₂ : Type*} [decidable_eq α₁] [decidable_eq α₂]
 (v : α₁ → α₂) (f : α₁ →₀ β) (h : function.injective v) {a : α₁} :
 (map_domain v f) (v a) = f a := show (f.sum $ λ x, single (v x)) (v a) = f a,
@@ -33,7 +35,8 @@ begin
   congr
 end
 
-lemma extend_restrict (p : α → Prop) [d : decidable_pred p] (f : {f : α →₀ β // ∀ a ∈ f.support, p a}) :
+--subtype_domain
+lemma subtype_domain_left_inv (p : α → Prop) [d : decidable_pred p] (f : {f : α →₀ β // ∀ a ∈ f.support, p a}) :
 map_domain subtype.val (subtype_domain p f.val) = f.val :=
 finsupp.ext $ λ a, match d a with
 | is_true  (hp : p a)  := by rw[←subtype.coe_mk _ hp];
@@ -43,8 +46,7 @@ finsupp.ext $ λ a, match d a with
   have h0 : f.val a = 0, from of_not_not $ mt ((f.val.mem_support_to_fun a).mpr) this,
   begin
     rw[h0],
-    apply of_not_not,
-    apply mt (mem_support_to_fun _ _).mpr,
+    apply (not_mem_support_iff).mp,
     apply mt (mem_of_subset map_domain_support),
     simp,
     assume x _ hfx hxa,
@@ -52,10 +54,12 @@ finsupp.ext $ λ a, match d a with
   end
 end
 
-lemma restrict_extend (p : α → Prop) [decidable_pred p] (f : subtype p →₀ β) :
+--subtype domain
+lemma subtype_domain_right_inv (p : α → Prop) [decidable_pred p] (f : subtype p →₀ β) :
 subtype_domain p (map_domain subtype.val f) = f :=
 finsupp.ext $ λ a, map_domain_apply _ _ (subtype.val_injective)
 
+--lc ?
 def equiv_lc [ring α] [module α β] {s : set β} [decidable_pred s] :
 (s →₀ α) ≃ lc.supported s :=
 { to_fun := λ f, ⟨map_domain subtype.val f,
@@ -63,8 +67,8 @@ def equiv_lc [ring α] [module α β] {s : set β} [decidable_pred s] :
     have h0 : a ∈ image _ _, from mem_of_subset map_domain_support h,
     let ⟨ap, _, hs⟩ := mem_image.mp h0 in hs ▸ ap.property⟩,
   inv_fun := (finsupp.subtype_domain s) ∘ subtype.val,
-  left_inv := restrict_extend _,
-  right_inv := λ f, subtype.eq $ extend_restrict _ f }
+  left_inv := subtype_domain_right_inv _,
+  right_inv := λ f, subtype.eq $ subtype_domain_left_inv _ f }
 
 end finsupp
 
@@ -77,10 +81,12 @@ variables {b : set β}
 
 include α β
 
+--basis.lean
 noncomputable def equiv_finsupp_basis [decidable_pred b] (h : is_basis b) : β ≃ (b →₀ α) :=
 calc β ≃ lc.supported b : (module_equiv_lc h).to_equiv
    ... ≃ (b →₀ α)       : equiv.symm finsupp.equiv_lc
 
+--basis.lean
 noncomputable def equiv_fun_basis [decidable_pred b] [fintype b] (h : is_basis b) : β ≃ (b → α) := 
 calc β ≃ (b →₀ α) : equiv_finsupp_basis h
    ... ≃ (b → α)  : finsupp.equiv_fun
@@ -89,13 +95,14 @@ end module
 
 namespace vector_space
  
-open fintype vector_space cardinal finsupp module
+open fintype module
  
 variables (α : Type u) (β : Type v)
 variables [discrete_field α] [fintype α]
 variables [add_comm_group β] [fintype β]
 variables [vector_space α β]
 
+--vector_space
 lemma card_fin [deβ : decidable_eq β] : ∃ n : ℕ, card β = (card α) ^ n :=
 let ⟨b, hb⟩ := exists_is_basis β in
 begin
