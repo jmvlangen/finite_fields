@@ -36,14 +36,14 @@ begin
 end
 
 --subtype_domain
-lemma subtype_domain_left_inv (p : α → Prop) [d : decidable_pred p] (f : {f : α →₀ β // ∀ a ∈ f.support, p a}) :
-map_domain subtype.val (subtype_domain p f.val) = f.val :=
+lemma subtype_domain_left_inv (p : α → Prop) [d : decidable_pred p] (f : α →₀ β) (h : ∀ a ∈ f.support, p a) :
+map_domain subtype.val (subtype_domain p f) = f :=
 finsupp.ext $ λ a, match d a with
 | is_true  (hp : p a)  := by rw[←subtype.coe_mk _ hp];
   exact map_domain_apply _ _ subtype.val_injective
 | is_false (hp : ¬p a) :=
-  have a ∉ f.val.support, from mt (f.property a) hp,
-  have h0 : f.val a = 0, from of_not_not $ mt ((f.val.mem_support_to_fun a).mpr) this,
+  have a ∉ f.support, from mt (h a) hp,
+  have h0 : f a = 0, from of_not_not $ mt ((f.mem_support_to_fun a).mpr) this,
   begin
     rw[h0],
     apply (not_mem_support_iff).mp,
@@ -68,7 +68,7 @@ def equiv_lc [ring α] [module α β] {s : set β} [decidable_pred s] :
     let ⟨ap, _, hs⟩ := mem_image.mp h0 in hs ▸ ap.property⟩,
   inv_fun := (finsupp.subtype_domain s) ∘ subtype.val,
   left_inv := subtype_domain_right_inv _,
-  right_inv := λ f, subtype.eq $ subtype_domain_left_inv _ f }
+  right_inv := λ f, subtype.eq $ subtype_domain_left_inv _ f.val f.property }
 
 end finsupp
 
